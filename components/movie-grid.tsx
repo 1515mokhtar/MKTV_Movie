@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { MovieCard } from "./movie-card"
 import { MovieFilters } from "./movie-filters"
+import { Pagination } from "@/components/ui/pagination"
 
 interface Movie {
   id: number
@@ -19,35 +20,33 @@ interface MovieGridProps {
   orderBy?: "date" | "views" | "rating"
 }
 
-// Utility functions
-const filterByGenre = (movies: Movie[], genre: string) => {
-  return genre === "all"
-    ? movies
-    : movies.filter((movie) => movie.genre.toLowerCase().includes(genre));
-};
+const filterByGenre = (movies: Movie[], selectedGenre: string): Movie[] => {
+  if (selectedGenre === "all") {
+    return movies
+  }
+  return movies.filter((movie) => movie.genre.toLowerCase().includes(selectedGenre.toLowerCase()))
+}
 
-const filterByYear = (movies: Movie[], year: string) => {
-  return year === "all"
-    ? movies
-    : movies.filter((movie) => new Date(movie.releaseDate).getFullYear().toString() === year);
-};
+const filterByYear = (movies: Movie[], selectedYear: string): Movie[] => {
+  if (selectedYear === "all") {
+    return movies
+  }
+  return movies.filter((movie) => movie.releaseDate.startsWith(selectedYear))
+}
 
-const sortMovies = (movies: Movie[], sortBy: string) => {
-  return movies.sort((a, b) => {
-    switch (sortBy) {
-      case "date":
-        return new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime();
-      case "rating":
-        return b.views - a.views;
-      case "views":
-        return b.views - a.views;
-      case "name":
-        return a.title.localeCompare(b.title);
-      default:
-        return 0;
-    }
-  });
-};
+const sortMovies = (movies: Movie[], selectedSort: string): Movie[] => {
+  switch (selectedSort) {
+    case "date":
+      return [...movies].sort((a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime())
+    case "views":
+      return [...movies].sort((a, b) => b.views - a.views)
+    case "rating":
+      // Add rating logic here if needed
+      return movies
+    default:
+      return movies
+  }
+}
 
 export function MovieGrid({ type, orderBy = "date" }: MovieGridProps) {
   const [movies, setMovies] = useState<Movie[]>([])
@@ -57,111 +56,125 @@ export function MovieGrid({ type, orderBy = "date" }: MovieGridProps) {
   const [selectedGenre, setSelectedGenre] = useState("all")
   const [selectedYear, setSelectedYear] = useState("all")
   const [selectedSort, setSelectedSort] = useState("date")
-  const [apiResponse, setApiResponse] = useState<any>(null) // Store the entire API response
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
 
-  // Fetch genres
-  useEffect(() => {
-    const fetchGenres = async () => {
-      try {
-        const response = await fetch(
-          "https://api.themoviedb.org/3/genre/movie/list?api_key=4781aa55a1bf3c6ef05ee0bc0a94fcbc"
-        )
-        const data = await response.json()
-        const genreMap = data.genres.reduce((acc: Record<number, string>, genre: any) => {
+  const fetchGenres = async () => {
+    try {
+      const response = await fetch("https://api.themoviedb.org/3/genre/movie/list?language=en-US", {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+          Authorization:
+            "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0NzgxYWE1NWExYmYzYzZlZjA1ZWUwYmMwYTk0ZmNiYyIsIm5iZiI6MTczODcwNDY2Mi4wMDMsInN1YiI6IjY3YTI4NzE1N2M4NjA5NjAyOThhNjBmNiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.kGBXkjuBtqgKXEGMVRWJ88LUWg_lykPOyBZKoOIBmcc",
+        },
+      })
+      const data = await response.json()
+      const genreMap = data.genres.reduce(
+        (acc: { [x: string]: any }, genre: { id: string | number; name: any }) => {
           acc[genre.id] = genre.name
           return acc
-        }, {})
-        setGenres(genreMap)
-        setGenreList(data.genres)
-      } catch (error) {
-        console.error("Error fetching genres:", error)
-      }
+        },
+        {} as Record<number, string>,
+      )
+      setGenres(genreMap)
+      setGenreList(data.genres)
+    } catch (error) {
+      console.error("Error fetching genres:", error)
     }
+  }
 
-    fetchGenres()
-  }, [])
+  const fetchMovies = async (page: number) => {
+    setLoading(true)
+    try {
+      const url = `https://api.themoviedb.org/3/movie/popular?language=en-US&page=${page}`
+      const options = {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+          Authorization:
+            "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0NzgxYWE1NWExYmYzYzZlZjA1ZWUwYmMwYTk0ZmNiYyIsIm5iZiI6MTczODcwNDY2Mi4wMDMsInN1YiI6IjY3YTI4NzE1N2M4NjA5NjAyOThhNjBmNiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.kGBXkjuBtqgKXEGMVRWJ88LUWg_lykPOyBZKoOIBmcc",
+        },
+      }
 
-  // Fetch movies
-  useEffect(() => {
-    const getMovies = async () => {
-      setLoading(true)
-      try {
-        const url = 'https://api.themoviedb.org/3/movie/popular?language=en-US&page=1';
-        const options = {
-          method: 'GET',
-          headers: {
-            accept: 'application/json',
-            Authorization: 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0NzgxYWE1NWExYmYzYzZlZjA1ZWUwYmMwYTk0ZmNiYyIsIm5iZiI6MTczODcwNDY2Mi4wMDMsInN1YiI6IjY3YTI4NzE1N2M4NjA5NjAyOThhNjBmNiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.kGBXkjuBtqgKXEGMVRWJ88LUWg_lykPOyBZKoOIBmcc'
-          }
-        };
+      const response = await fetch(url, options)
+      const data = await response.json()
+      setTotalPages(data.total_pages)
 
-        const response = await fetch(url, options)
-        const data = await response.json()
-        setApiResponse(data) // Store the entire API response
-
-        // Transform the API data
-        const transformedMovies = data.results?.map((movie: any, index: number) => ({
-          id: movie.id, // <-- id is a number
+      // Transform the API data
+      const transformedMovies =
+        data.results?.map((movie: any) => ({
+          id: movie.id,
           title: movie.title,
           type: type || (Math.random() > 0.5 ? "movie" : "series"),
           releaseDate: movie.release_date,
           views: Math.floor(Math.random() * 1000000),
           poster: movie.poster_path
             ? `https://image.tmdb.org/t/p/w300${movie.poster_path}`
-            : `/placeholder.svg?height=450&width=300&text=${index + 1}`,
-          genre: movie.genre_ids
-            .map((id: number) => genres[id] || "Unknown")
-            .join(", "),
+            : `/placeholder.svg?height=450&width=300&text=${movie.title}`,
+          genre: movie.genre_ids.map((id: number) => genres[id] || "Unknown").join(", "),
         })) || []
 
-        // Filter and sort movies
-        const filteredMovies = filterByGenre(transformedMovies, selectedGenre)
-        const filteredByYear = filterByYear(filteredMovies, selectedYear)
-        const sortedMovies = sortMovies(filteredByYear, selectedSort)
+      // Filter and sort movies
+      const filteredMovies = filterByGenre(transformedMovies, selectedGenre)
+      const filteredByYear = filterByYear(filteredMovies, selectedYear)
+      const sortedMovies = sortMovies(filteredByYear, selectedSort)
 
-        setMovies(sortedMovies)
-      } catch (error) {
-        console.error("Error fetching movies:", error)
-      } finally {
-        setLoading(false)
-      }
+      setMovies(sortedMovies)
+    } catch (error) {
+      console.error("Error fetching movies:", error)
+    } finally {
+      setLoading(false)
     }
+  }
 
+  useEffect(() => {
+    fetchGenres()
+  }, [])
+
+  useEffect(() => {
     if (Object.keys(genres).length > 0) {
-      getMovies()
+      fetchMovies(currentPage)
     }
-  }, [type, genres, selectedGenre, selectedYear, selectedSort])
+  }, [type, genres, selectedGenre, selectedYear, selectedSort, currentPage])
 
-  if (loading) {
-    return (
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-        {Array.from({ length: 10 }).map((_, index) => (
-          <div key={index} className="aspect-[2/3] rounded-lg bg-muted animate-pulse" />
-        ))}
-      </div>
-    )
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    window.scrollTo(0, 0)
   }
 
   return (
-    <>
+    <div className="space-y-6">
       <MovieFilters
         genres={genreList}
         onGenreChange={setSelectedGenre}
         onYearChange={setSelectedYear}
         onSortChange={setSelectedSort}
       />
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-        {movies.map((movie) => (
-          <MovieCard
-            key={movie.id}
-            title={movie.title}
-            genre={movie.genre}
-            releaseDate={new Date(movie.releaseDate).getFullYear().toString()}
-            poster={movie.poster}
-            id={movie.id}
-          />
-        ))}
-      </div>
-    </>
+      {loading ? (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+          {Array.from({ length: 10 }).map((_, index) => (
+            <div key={index} className="aspect-[2/3] rounded-lg bg-muted animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {movies.map((movie) => (
+              <MovieCard
+                key={movie.id}
+                title={movie.title}
+                genre={movie.genre}
+                releaseDate={new Date(movie.releaseDate).getFullYear().toString()}
+                poster={movie.poster}
+                id={movie.id}
+              />
+            ))}
+          </div>
+          <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
+        </>
+      )}
+    </div>
   )
 }
+
