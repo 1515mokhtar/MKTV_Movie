@@ -5,12 +5,14 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import type React from "react" // Added import for React
+import { Head } from "react-day-picker"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "MovieFlix - Stream Your Favorite Movies",
+  title: "MKTV - Stream Your Favorite Movies",
   description: "Watch the latest movies and TV shows online",
+  icons: "/iconMKTV.ico",
 }
 
 export default function RootLayout({
@@ -20,6 +22,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      
+        <link rel="icon" href="/iconMKTV.ico" type="image/x-icon" />
+      
       <body className={`${inter.className} min-h-screen bg-background`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <Header />
