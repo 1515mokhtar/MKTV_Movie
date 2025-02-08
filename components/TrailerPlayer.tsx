@@ -7,14 +7,12 @@ import { cn } from "@/lib/utils"
 import { Play } from "lucide-react"
 
 interface VideoTrailerProps {
-  videoId: string  // Assurez-vous que c'est bien `videoId` et non `movieId`
+  movieId: string | number
   className?: string
   title?: string
-  movieId?: string | number
 }
 
-
-export default function VideoTrailer({ movieId, className, title = "Video Trailer" }: VideoTrailerProps) {
+export default function VideoTrailer({ movieId, className, title = "Featured Trailer" }: VideoTrailerProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [hasClicked, setHasClicked] = useState(false)
@@ -24,23 +22,21 @@ export default function VideoTrailer({ movieId, className, title = "Video Traile
   useEffect(() => {
     const fetchTrailer = async () => {
       try {
-        console.log("Fetching trailer for movieId:", movieId)
         const url = `https://api.themoviedb.org/3/movie/${movieId}/videos?language=en-US`
         const options = {
-          method: 'GET',
+          method: "GET",
           headers: {
-            accept: 'application/json',
-            Authorization: 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0NzgxYWE1NWExYmYzYzZlZjA1ZWUwYmMwYTk0ZmNiYyIsIm5iZiI6MTczODcwNDY2Mi4wMDMsInN1YiI6IjY3YTI4NzE1N2M4NjA5NjAyOThhNjBmNiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.kGBXkjuBtqgKXEGMVRWJ88LUWg_lykPOyBZKoOIBmcc'
-          }
+            accept: "application/json",
+            Authorization:
+              "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0NzgxYWE1NWExYmYzYzZlZjA1ZWUwYmMwYTk0ZmNiYyIsIm5iZiI6MTczODcwNDY2Mi4wMDMsInN1YiI6IjY3YTI4NzE1N2M4NjA5NjAyOThhNjBmNiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.kGBXkjuBtqgKXEGMVRWJ88LUWg_lykPOyBZKoOIBmcc",
+          },
         }
         const response = await fetch(url, options)
         const data = await response.json()
-        console.log("API response:", data) // 🛑 Ajoute ce log pour voir la réponse
-  
+
         if (data.results && data.results.length > 0) {
           const trailer = data.results.find((video: any) => video.type === "Trailer" && video.site === "YouTube")
           if (trailer) {
-            console.log("Trailer found:", trailer.key) // 🛑 Vérifie si on trouve une vidéo
             setVideoId(trailer.key)
           } else {
             console.warn("No YouTube trailer found")
@@ -50,9 +46,11 @@ export default function VideoTrailer({ movieId, className, title = "Video Traile
         }
       } catch (error) {
         console.error("Error fetching trailer:", error)
+      } finally {
+        setIsLoading(false)
       }
     }
-  
+
     fetchTrailer()
   }, [movieId])
 
@@ -61,10 +59,10 @@ export default function VideoTrailer({ movieId, className, title = "Video Traile
   return (
     <div className="w-full max-w-[1920px] mx-auto px-4 py-8">
       <div className="space-y-4">
-        {title && <h2 className="text-3xl font-bold tracking-tight">{title}</h2>}
+        {title && <h2 className="text-3xl font-bold tracking-tight text-white">{title}</h2>}
         <div
           className={cn(
-            "relative aspect-video w-full overflow-hidden rounded-xl bg-muted shadow-xl",
+            "relative aspect-video w-full overflow-hidden rounded-xl bg-gray-800 shadow-xl",
             "cursor-pointer transition-transform hover:scale-[1.02]",
             className,
           )}
@@ -73,8 +71,9 @@ export default function VideoTrailer({ movieId, className, title = "Video Traile
             setIsPlaying(true)
           }}
         >
-          {isLoading && <Skeleton className="absolute inset-0 z-10" />}
-          {!hasClicked ? (
+          {isLoading ? (
+            <Skeleton className="absolute inset-0 z-10" />
+          ) : !hasClicked ? (
             <>
               <div className="absolute inset-0 bg-black">
                 {videoId && (
@@ -105,36 +104,36 @@ export default function VideoTrailer({ movieId, className, title = "Video Traile
             </>
           ) : (
             videoId && (
-              <ReactPlayer
-                url={`https://www.youtube.com/watch?v=${videoId}`}
-                width="100%"
-                height="100%"
-                playing={isPlaying}
-                controls={true}
-                onReady={() => setIsLoading(false)}
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
-                config={{
-                  youtube: {
-                    playerVars: {
-                      showinfo: 1,
-                      rel: 0,
-                      modestbranding: 1,
-                      playsinline: 1,
-                      controls: 1,
-                      enablejsapi: 1,
-                      origin: window.location.origin,
+              <div className="relative pt-[56.25%]">
+                <ReactPlayer
+                  url={`https://www.youtube.com/watch?v=${videoId}`}
+                  width="100%"
+                  height="100%"
+                  playing={isPlaying}
+                  controls={true}
+                  onReady={() => setIsLoading(false)}
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
+                  config={{
+                    youtube: {
+                      playerVars: {
+                        showinfo: 1,
+                        rel: 0,
+                        modestbranding: 1,
+                        playsinline: 1,
+                        controls: 1,
+                        enablejsapi: 1,
+                        origin: typeof window !== "undefined" ? window.location.origin : "",
+                      },
                     },
-                  },
-                }}
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: "100%",
-                }}
-              />
+                  }}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                  }}
+                />
+              </div>
             )
           )}
         </div>
@@ -142,3 +141,4 @@ export default function VideoTrailer({ movieId, className, title = "Video Traile
     </div>
   )
 }
+

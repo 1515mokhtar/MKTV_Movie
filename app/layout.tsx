@@ -5,7 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import type React from "react" // Added import for React
-import { Head } from "react-day-picker"
+
 
 const inter = Inter({ subsets: ["latin"] })
 
