@@ -1,12 +1,22 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { ReactNode, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Calendar, Clock, Star, Film } from "lucide-react"
 import VideoTrailer from "@/components/TrailerPlayer"
-
+import { useRouter } from "next/navigation" // Use 'next/router' if using Next.js
 interface Movie {
+  origin_country: any
+ 
+  homepage:ReactNode
+  popularity:ReactNode
+  spoken_languages:ReactNode
+  status:ReactNode
+  vote_count:ReactNode
+  origin_cuntry:ReactNode 
+  imdb_id :ReactNode
+  adult: ReactNode
   id: number
   title: string
   overview: string
@@ -17,8 +27,14 @@ interface Movie {
   runtime: number
   vote_average: number
   tagline?: string
+  
 }
 
+type ContentType = {
+  id: string;
+  type: 'movie' | 'series';
+  title: string;
+};
 interface MovieDetailsProps {
   params: { id: string }
 }
@@ -26,8 +42,9 @@ interface MovieDetailsProps {
 export default function MovieDetails({ params }: MovieDetailsProps) {
   const [movie, setMovie] = useState<Movie | null>(null)
   const [loading, setLoading] = useState(true)
-
+  const [selectedContent, setSelectedContent] = useState<ContentType | null>(null);
   const movieId = Number.parseInt(params.id, 10)
+  const router = useRouter() // Initialize the router
 
   useEffect(() => {
     const fetchMovieDetails = async () => {
@@ -55,16 +72,21 @@ export default function MovieDetails({ params }: MovieDetailsProps) {
     fetchMovieDetails()
   }, [movieId])
 
+  
   if (loading) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>
   }
 
+
   if (!movie) {
     return <div className="flex justify-center items-center h-screen">Movie not found.</div>
   }
-
+  // console.log("Movie Object Keys:", Object(movie ?? {}));
+  const handleWatchNow = () => {
+    router.push(`/watch/${movieId}/player`) // Navigate to the watch page
+  }
   return (
-    <div className="relative min-h-screen bg-gray-900  flex justify-center items-center text-white">
+    <div className="relative min-h-screen flex justify-center items-center bg-gray-900 text-white">
       {/* Backdrop Image */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20 blur-sm"
@@ -81,7 +103,7 @@ export default function MovieDetails({ params }: MovieDetailsProps) {
               className="w-full rounded-lg shadow-2xl transition-transform duration-300 hover:scale-105"
             />
           </div>
-
+        
           {/* Movie Info */}
           <div className="flex-grow space-y-4 md:space-y-6">
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold">{movie.title}</h1>
@@ -103,6 +125,7 @@ export default function MovieDetails({ params }: MovieDetailsProps) {
               <div className="flex items-center gap-2">
                 <Star className="w-5 h-5 text-yellow-400 flex-shrink-0" />
                 <span>{movie.vote_average.toFixed(1)}/10</span>
+                
               </div>
               <div className="flex items-center gap-2">
                 <Film className="w-5 h-5 text-blue-400 flex-shrink-0" />
@@ -111,11 +134,27 @@ export default function MovieDetails({ params }: MovieDetailsProps) {
             </div>
 
             {/* Trailer Button */}
-            <Dialog>
+            <Dialog >
+              <div className="flex  justify-between">
+
               <DialogTrigger asChild>
                 <Button className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg shadow-md transition-all">
                   Watch Trailer
                 </Button>
+                {/* Try   */}
+              </DialogTrigger>
+              <DialogTrigger asChild>
+
+                <Button 
+                onClick={handleWatchNow}
+                 className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg shadow-md transition-all">
+                     Watch Now
+                </Button>
+             </DialogTrigger>
+              </div>
+              <DialogTrigger asChild>
+              
+                 
               </DialogTrigger>
               <DialogContent className="max-w-4xl">
                 <VideoTrailer movieId={String(movieId)} title={movie.title} />

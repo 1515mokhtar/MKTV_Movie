@@ -1,11 +1,11 @@
-// app/watch/[id]/page.tsx
+// app/watch/[id]/player/page.tsx
 "use client"
 
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import ReactPlayer from "react-player" // Video player library
 
-export default function WatchPage() {
+export default function PlayerPage() {
   const params = useParams()
   const movieId = params.id
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
