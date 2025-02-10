@@ -8,7 +8,7 @@ export function HeroSection() {
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
-          backgroundImage: "url('/bghero3.webp?height=1080&width=1920')",
+          backgroundImage: "url('/bghero2.webp?height=1080&width=1920')",
         }}
       />
       <div className="container relative flex h-full items-center">

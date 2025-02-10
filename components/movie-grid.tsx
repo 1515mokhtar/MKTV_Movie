@@ -18,6 +18,7 @@ interface Movie {
 interface MovieGridProps {
   type?: "movie" | "series"
   orderBy?: "date" | "views" | "rating"
+  searchQuery?: string
 }
 
 const filterByGenre = (movies: Movie[], selectedGenre: string): Movie[] => {
@@ -48,7 +49,14 @@ const sortMovies = (movies: Movie[], selectedSort: string): Movie[] => {
   }
 }
 
-export function MovieGrid({ type, orderBy = "date" }: MovieGridProps) {
+const filterMoviesBySearch = (movies: Movie[], query: string): Movie[] => {
+  if (!query) return movies // Return all movies if no search query
+  return movies.filter((movie) =>
+    movie.title.toLowerCase().includes(query.toLowerCase())
+  )
+}
+
+export function MovieGrid({ type, orderBy = "date", searchQuery = "" }: MovieGridProps) {
   const [movies, setMovies] = useState<Movie[]>([])
   const [loading, setLoading] = useState(true)
   const [genres, setGenres] = useState<Record<number, string>>({})
@@ -119,8 +127,9 @@ export function MovieGrid({ type, orderBy = "date" }: MovieGridProps) {
       const filteredMovies = filterByGenre(transformedMovies, selectedGenre)
       const filteredByYear = filterByYear(filteredMovies, selectedYear)
       const sortedMovies = sortMovies(filteredByYear, selectedSort)
+      const searchedMovies = filterMoviesBySearch(sortedMovies, searchQuery)
 
-      setMovies(sortedMovies)
+      setMovies(searchedMovies)
     } catch (error) {
       console.error("Error fetching movies:", error)
     } finally {
@@ -136,7 +145,7 @@ export function MovieGrid({ type, orderBy = "date" }: MovieGridProps) {
     if (Object.keys(genres).length > 0) {
       fetchMovies(currentPage)
     }
-  }, [type, genres, selectedGenre, selectedYear, selectedSort, currentPage])
+  }, [type, genres, selectedGenre, selectedYear, selectedSort, currentPage, searchQuery])
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
@@ -177,4 +186,3 @@ export function MovieGrid({ type, orderBy = "date" }: MovieGridProps) {
     </div>
   )
 }
-

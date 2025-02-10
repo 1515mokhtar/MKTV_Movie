@@ -1,3 +1,4 @@
+
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
@@ -12,14 +13,20 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "MKTV - Stream Your Favorite Movies",
   description: "Watch the latest movies and TV shows online",
-  icons: "/iconMKTV.ico",
+  icons: "/iconMKTV3.ico",
 }
 
 export default function RootLayout({
+  
   children,
 }: {
   children: React.ReactNode
-}) {
+} 
+) 
+
+
+  {
+   
   return (
     <html lang="en" suppressHydrationWarning>
       
@@ -27,7 +34,7 @@ export default function RootLayout({
       
       <body className={`${inter.className} min-h-screen bg-background`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-          <Header />
+        <Header />
           <main>{children}</main>
           <Footer />
         </ThemeProvider>
