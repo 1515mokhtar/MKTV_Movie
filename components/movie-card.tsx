@@ -16,7 +16,9 @@ interface MovieCardProps {
 export function MovieCard({ id ,title, genre, releaseDate, poster }: MovieCardProps) {
 
   return (
+    
     <Card className="overflow-hidden bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
+      <Link  href={`/movies/${id.toString()}`}>
       <CardHeader className="p-0">
         <div className="aspect-[2/3] relative overflow-hidden">
           <Image
@@ -27,6 +29,7 @@ export function MovieCard({ id ,title, genre, releaseDate, poster }: MovieCardPr
           />
         </div>
       </CardHeader>
+     
       <CardContent className="p-4">
         <h3 className="font-semibold truncate">{title}</h3>
         <p className="text-sm text-muted-foreground">
@@ -43,6 +46,7 @@ export function MovieCard({ id ,title, genre, releaseDate, poster }: MovieCardPr
           <Heart className="h-4 w-4" />
         </Button>
       </CardFooter>
+      </Link>
     </Card>
   )
 }
