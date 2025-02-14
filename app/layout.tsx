@@ -5,6 +5,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { AuthProvider } from './contexts/AuthContext'
 import type React from "react" // Added import for React
 
 
@@ -34,9 +35,11 @@ export default function RootLayout({
       
       <body className={`${inter.className} min-h-screen bg-background`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+        <AuthProvider>
         <Header />
           <main>{children}</main>
           <Footer />
+        </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

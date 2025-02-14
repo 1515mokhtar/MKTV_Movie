@@ -9,10 +9,18 @@ import {
   NavigationMenuList,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
-import { Search, User } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Search, User, LogOut, Settings, Heart, Clock, Film } from 'lucide-react';
 import Link from "next/link";
 import { useState, useRef, FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/contexts/AuthContext"; // Assuming you have an AuthContext
 
 interface HeaderProps {
   onSearch?: (query: string) => void;
@@ -27,8 +35,9 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const { user, logout } = useAuth(); // Use the authentication context
 
-  const performSearch = async (query: string) => {
+ const performSearch = async (query: string) => {
     if (!query.trim()) {
       setError("Please enter a search term.");
       return;
@@ -72,6 +81,12 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
     router.push(`/movies/${id}`);
   };
 
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/'); // Redirect to home page after logout
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center gap-4">
@@ -79,7 +94,7 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
           MKTV
         </Link>
 
-        <div ref={wrapperRef} className="relative flex-1 md:max-w-96">
+       <div ref={wrapperRef} className="relative flex-1 md:max-w-96">
           <form onSubmit={handleSearchSubmit} className="flex gap-2">
             <Input
               type="search"
@@ -159,9 +174,73 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
           </NavigationMenuList>
         </NavigationMenu>
 
-        <Button variant="ghost" size="icon" className="ml-auto md:ml-0">
-          <User className="h-5 w-5" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="ml-auto md:ml-0">
+              <User className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            {user ? (
+              <>
+                <DropdownMenuItem className="font-medium">
+                  {user.name || user.email}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  <Link href="/profile" className="flex w-full items-center">
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Link href="/watchlist" className="flex w-full items-center">
+                    <Heart className="mr-2 h-4 w-4" />
+                    Watchlist
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Link href="/history" className="flex w-full items-center">
+                    <Clock className="mr-2 h-4 w-4" />
+                    Watch History
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Link href="/recommendations" className="flex w-full items-center">
+                    <Film className="mr-2 h-4 w-4" />
+                    Recommendations
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Link href="/settings" className="flex w-full items-center">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log out
+                </DropdownMenuItem>
+              </>
+            ) : (
+              <>
+                <DropdownMenuItem>
+                  <Link href="/login" className="flex w-full items-center">
+                    <User className="mr-2 h-4 w-4" />
+                    Log in
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Link href="/signup" className="flex w-full items-center">
+                    <User className="mr-2 h-4 w-4" />
+                    Sign up
+                  </Link>
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
