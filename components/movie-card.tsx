@@ -36,16 +36,6 @@ export function MovieCard({ id ,title, genre, releaseDate, poster }: MovieCardPr
           {releaseDate} • {genre}
         </p>
       </CardContent>
-      <CardFooter className="p-4 pt-0 flex justify-between">
-        <Link  href={`/movies/${id.toString()}`}>
-        <Button variant="ghost" size="sm">
-          Watch Now
-        </Button>
-        </Link>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Heart className="h-4 w-4" />
-        </Button>
-      </CardFooter>
       </Link>
     </Card>
   )
