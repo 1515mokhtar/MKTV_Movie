@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { Play } from "lucide-react"
-
+import Link from "next/link"
 export function HeroSection() {
   return (
     <section className="relative h-[70vh] min-h-[600px] w-full overflow-hidden">
@@ -15,13 +15,17 @@ export function HeroSection() {
         <div className="max-w-2xl space-y-4">
           <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">The Latest Blockbuster</h1>
           <p className="text-muted-foreground text-white text-lg">
-            Watch the most anticipated movie of the year, now streaming exclusively on MKTV.
+            Watch the most anticipated movie of the year
+            <br /> now streaming exclusively on
+            <br /><span className=""> MKTV.</span>
           </p>
           <div className="flex gap-4">
+            <Link href="/movies">
             <Button size="lg" className="gap-2">
               <Play className="h-5 w-5" />
               Watch Now
             </Button>
+            </Link>
             <Button size="lg" variant="outline">
               More Info
             </Button>

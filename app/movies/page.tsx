@@ -1,10 +1,9 @@
 'use client'
 import { MovieGrid } from "@/components/movie-grid"
-import {SeriesGrid} from "@/components/serie-grid" // Import the SeriesGrid component
 import { MovieFilters } from "@/components/movie-filters"
 
 
-export default function SeriesPage() {
+export default function MoviesPage() {
   return (
     <div className="container py-8">
       <div className="flex flex-col gap-6">
@@ -12,8 +11,7 @@ export default function SeriesPage() {
           <h1 className="text-3xl font-bold tracking-tight">TV Series</h1>
           <p className="text-muted-foreground">Showing latest releases first</p>
         </div>
-        
-          <SeriesGrid /> // Add the SeriesGrid component
+        <MovieGrid type="series" orderBy="date" />
       </div>
     </div>
   )

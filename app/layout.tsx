@@ -8,13 +8,20 @@ import { Footer } from "@/components/footer"
 import { AuthProvider } from './contexts/AuthContext'
 import type React from "react" // Added import for React
 
-
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "MKTV - Stream Your Favorite Movies",
   description: "Watch the latest movies and TV shows online",
-  icons: "/iconMKTV3.ico",
+  icons: {
+    icon: [
+      {
+        url: "/favicon.ico",
+        sizes: "180x180", // Make sure your .ico contains this size
+        type: "image/x-icon",
+      },
+    ],
+  },
 }
 
 export default function RootLayout({
