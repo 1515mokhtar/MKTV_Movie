@@ -1,0 +1,19 @@
+{
+    "series": [
+      {
+        "id": "252774",
+        "title": "The White Olive Tree",
+        "seasons": [
+          {
+            "season": 1,
+            "episodes": [
+              { "episode": 1, "title": "Episode 1", "video_url": "https://sheed4u.my/watch/%D9%85%D8%B3%D9%84%D8%B3%D9%84-%D8%B4%D8%AC%D8%B1%D8%A9-%D8%A7%D9%84%D8%B2%D9%8A%D8%AA%D9%88%D9%86-%D8%A7%D9%84%D8%A7%D8%A8%D9%8A%D8%B6-the-white-olive-tree-%D8%A7%D9%84%D8%AD%D9%84%D9%82%D8%A9-1-%D9%85%D8%AA%D8%B1%D8%AC%D9%85%D8%A9" },
+              { "episode": 2, "title": "Episode 2", "video_url": "https://example.com/series1/season1/ep2.mp4" }
+            ]
+          }
+          
+        ]
+      }
+    ]
+  }
+  

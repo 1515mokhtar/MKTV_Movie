@@ -1,7 +1,6 @@
-'use client'
+"use client";
 import { MovieGrid } from "@/components/movie-grid"
 import {SeriesGrid} from "@/components/serie-grid" // Import the SeriesGrid component
-import { MovieFilters } from "@/components/movie-filters"
 
 
 export default function SeriesPage() {

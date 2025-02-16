@@ -42,12 +42,21 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await fetch(`/api/search?q=${query}`)
+      const url = `https://api.themoviedb.org/3/search/movie?include_adult=false&language=en-US&page=1&query=${encodeURIComponent(query)}`;
+      const options = {
+        method: 'GET',
+        headers: {
+          accept: 'application/json',
+          Authorization: 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0NzgxYWE1NWExYmYzYzZlZjA1ZWUwYmMwYTk0ZmNiYyIsIm5iZiI6MTczODcwNDY2Mi4wMDMsInN1YiI6IjY3YTI4NzE1N2M4NjA5NjAyOThhNjBmNiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.kGBXkjuBtqgKXEGMVRWJ88LUWg_lykPOyBZKoOIBmcc'
+        }
+      };
+
+      const response = await fetch(url, options)
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       const data = await response.json()
-      setSearchResults(data)
+      setSearchResults(data.results)
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -72,8 +81,8 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
     }, 100)
   }
 
-  const handleMovieClick = (movieId: string) => {
-    router.push(`/movie/${movieId}`)
+  const handleMovieClick = (movieId: number) => {
+    router.push(`/movies/${movieId}`)
     setSearchQuery("")
     setIsSearchFocused(false)
     setSearchResults([])
@@ -122,9 +131,12 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
                     <li
                       key={result.id}
                       onClick={() => handleMovieClick(result.id)}
-                      className="cursor-pointer p-2 hover:bg-gray-100"
+                      className="cursor-pointer p-2 hover:bg-primary flex  justify-between"
                     >
-                      {result.title}
+                      <img  width={40} height={40} src={`https://image.tmdb.org/t/p/w500${result.poster_path}`} alt={result.title} /> 
+                     <div>
+                     {result.title}
+                     </div>
                     </li>
                   ))}
                 </ul>
@@ -238,4 +250,3 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
     </header>
   )
 }
-
