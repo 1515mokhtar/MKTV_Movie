@@ -225,11 +225,11 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
           <DropdownMenuContent align="end" className="w-56">
             {user ? (
               <>
-                <DropdownMenuItem>
-                  <Link href="/profile">Profile</Link>
+                <DropdownMenuItem  className="hover:bg-primary">
+                  <Link  className="w-full" href="/profile">Profile</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
-                  <Link href="/settings">Settings</Link>
+                  <Link   className="w-full" href="/settings">Settings</Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>Log out</DropdownMenuItem>
@@ -237,10 +237,10 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
             ) : (
               <>
                 <DropdownMenuItem>
-                  <Link href="/login">Log in</Link>
+                  <Link className="w-full" href="/login">Log in</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
-                  <Link href="/signup">Sign up</Link>
+                  <Link className="w-full" href="/signup">Sign up</Link>
                 </DropdownMenuItem>
               </>
             )}
