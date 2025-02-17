@@ -89,9 +89,26 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
   }
 
   const handleLogout = async () => {
-    await logout()
-    router.refresh()
-  }
+    try {
+      await signOut(auth);
+
+      // Mettre à jour l'état de l'utilisateur dans Firestore
+      const userRef = doc(db, "users", auth.currentUser?.uid!);
+      await updateDoc(userRef, { eta: "disconnected" });
+
+      // Ajouter l'historique de la déconnexion
+      const historiqueRef = collection(userRef, "historique");
+      await addDoc(historiqueRef, {
+        date: serverTimestamp(),
+        etat: "deconnexion",
+      });
+
+      // Redirection vers la page de login après la déconnexion
+      router.push("/login");
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

@@ -8,14 +8,6 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Star, Calendar, Clock, TrendingUp, ChevronLeft } from "lucide-react"
 
-// Define type for props
-type SeriesPageProps = {
-  params: {
-    id: string;
-  };
-};
-
-// Fetch series details based on the ID
 async function getSeriesDetails(id: string) {
   const url = `https://api.themoviedb.org/3/tv/${id}?append_to_response=credits,similar&language=en-US`
 
@@ -38,7 +30,6 @@ async function getSeriesDetails(id: string) {
   return res.json()
 }
 
-// Series information component
 function SeriesInfo({ series }: { series: any }) {
   return (
     <div className="grid gap-8 md:grid-cols-[2fr,3fr] lg:gap-12">
@@ -84,9 +75,7 @@ function SeriesInfo({ series }: { series: any }) {
           </div>
         </div>
         <div className="flex gap-4">
-          <Link href={`/serieswatch/${series.id}`}>
           <Button size="lg">Watch Now</Button>
-          </Link>
           <Button size="lg" variant="outline">
             Add to Watchlist
           </Button>
@@ -96,7 +85,6 @@ function SeriesInfo({ series }: { series: any }) {
   )
 }
 
-// Cast section
 function CastSection({ cast }: { cast: any[] }) {
   return (
     <section className="mt-12">
@@ -106,7 +94,9 @@ function CastSection({ cast }: { cast: any[] }) {
           <Card key={actor.id} className="overflow-hidden">
             <div className="relative aspect-[2/3]">
               <Image
-                src={actor.profile_path ? `https://image.tmdb.org/t/p/w200${actor.profile_path}` : "/placeholder-actor.png"}
+                src={
+                  actor.profile_path ? `https://image.tmdb.org/t/p/w200${actor.profile_path}` : "/placeholder-actor.png"
+                }
                 alt={actor.name}
                 fill
                 className="object-cover"
@@ -124,7 +114,6 @@ function CastSection({ cast }: { cast: any[] }) {
   )
 }
 
-// Seasons section
 function SeasonsSection({ seasons }: { seasons: any[] }) {
   return (
     <section className="mt-12">
@@ -134,7 +123,11 @@ function SeasonsSection({ seasons }: { seasons: any[] }) {
           <Card key={season.id} className="overflow-hidden">
             <div className="relative aspect-[2/3]">
               <Image
-                src={season.poster_path ? `https://image.tmdb.org/t/p/w200${season.poster_path}` : "/placeholder-season.png"}
+                src={
+                  season.poster_path
+                    ? `https://image.tmdb.org/t/p/w200${season.poster_path}`
+                    : "/placeholder-season.png"
+                }
                 alt={season.name}
                 fill
                 className="object-cover"
@@ -152,7 +145,6 @@ function SeasonsSection({ seasons }: { seasons: any[] }) {
   )
 }
 
-// Similar series section
 function SimilarSeriesSection({ similarSeries }: { similarSeries: any[] }) {
   return (
     <section className="mt-12">
@@ -163,7 +155,11 @@ function SimilarSeriesSection({ similarSeries }: { similarSeries: any[] }) {
             <Card className="overflow-hidden transition-transform hover:scale-105">
               <div className="relative aspect-[2/3]">
                 <Image
-                  src={series.poster_path ? `https://image.tmdb.org/t/p/w200${series.poster_path}` : "/placeholder-series.png"}
+                  src={
+                    series.poster_path
+                      ? `https://image.tmdb.org/t/p/w200${series.poster_path}`
+                      : "/placeholder-series.png"
+                  }
                   alt={series.name}
                   fill
                   className="object-cover"
@@ -182,7 +178,6 @@ function SimilarSeriesSection({ similarSeries }: { similarSeries: any[] }) {
   )
 }
 
-// Main Series Page Component
 export default async function SeriesPage({ params }: { params: { id: string } }) {
   let series
   try {
@@ -220,7 +215,6 @@ export default async function SeriesPage({ params }: { params: { id: string } })
   )
 }
 
-// Loading skeleton for SeriesInfo
 function SeriesInfoSkeleton() {
   return (
     <div className="grid gap-8 md:grid-cols-[2fr,3fr] lg:gap-12">
@@ -238,21 +232,25 @@ function SeriesInfoSkeleton() {
             <Skeleton key={i} className="h-24 w-full" />
           ))}
         </div>
+        <div className="flex gap-4">
+          <Skeleton className="h-12 w-32" />
+          <Skeleton className="h-12 w-40" />
+        </div>
       </div>
     </div>
   )
 }
 
-// Loading skeleton for sections
 function SectionSkeleton({ title }: { title: string }) {
   return (
     <section className="mt-12">
       <h2 className="text-3xl font-bold mb-6">{title}</h2>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
         {[1, 2, 3, 4, 5, 6].map((i) => (
-          <Skeleton key={i} className="h-32 w-full" />
+          <Skeleton key={i} className="aspect-[2/3] w-full" />
         ))}
       </div>
     </section>
   )
 }
+

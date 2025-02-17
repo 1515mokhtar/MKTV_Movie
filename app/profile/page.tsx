@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { User, updateProfile, updateEmail, updatePhoneNumber } from "firebase/auth"
-import { doc, setDoc, getDoc } from "firebase/firestore"
+import { doc, setDoc, getDoc ,updateDoc } from "firebase/firestore"
 import { auth, db } from "@/lib/firebase" // Import auth and Firestore from your Firebase config
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -64,10 +64,21 @@ export default function ProfilePage() {
     }
   }
 
-  const handleSignOut = () => {
-    auth.signOut().then(() => {
-      router.push("/")
-    })
+  const handleSignOut = async () => {
+    try {
+      // Mise à jour de l'état de l'utilisateur dans Firestore avant la déconnexion
+      const user = auth.currentUser;
+      if (user) {
+        const userRef = doc(db, "users", user.uid);
+        await updateDoc(userRef, { eta: "disconnected" });
+  
+        // Déconnexion de l'utilisateur
+        await auth.signOut();
+        router.push("/"); // Redirection vers la page d'accueil
+      }
+    } catch (error) {
+      console.error("Erreur lors de la déconnexion", error);
+    }
   }
 
   const handleEditProfile = async () => {

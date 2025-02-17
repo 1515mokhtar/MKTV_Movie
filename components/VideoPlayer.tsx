@@ -3,13 +3,17 @@
 import { useState } from "react"
 import ReactPlayer from "react-player"
 
-export default function VideoPlayer() {
+interface VideoPlayerProps {
+  url: string
+}
+
+export default function VideoPlayer({ url }: VideoPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false)
 
   return (
     <div className="aspect-video relative">
       <ReactPlayer
-        url="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+        url={url}
         width="100%"
         height="100%"
         playing={isPlaying}
