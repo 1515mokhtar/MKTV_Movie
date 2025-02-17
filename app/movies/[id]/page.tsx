@@ -23,7 +23,7 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 
 async function getMovieDetails(id: string) {
-  const url = `https://api.themoviedb.org/3/movie/${id}?append_to_response=credits,similar,videos&language=en-US`
+  const url = `https://api.themoviedb.org/3/movie/${id}?append_to_response=credits,similar,videos&language=en-US`;
 
   const res = await fetch(url, {
     method: "GET",
@@ -31,15 +31,18 @@ async function getMovieDetails(id: string) {
       accept: "application/json",
       Authorization: `Bearer ${process.env.NEXT_PUBLIC_TMDB_API_KEY}`,
     },
-    next: { revalidate: 60 * 60 * 24 }, // Revalidate every 24 hours
-  })
+    next: { revalidate: 60 * 60 * 24 },
+  });
 
   if (!res.ok) {
-    notFound()
+    const errorData = await res.json();  // Get response data for debugging
+    console.error("Error fetching movie details:", errorData);
+    notFound();  // Can show an error page instead of a generic 'not found'
   }
 
-  return res.json()
+  return res.json();
 }
+
 
 function MovieInfo({ movie }: { movie: any }) {
   const router = useRouter()
