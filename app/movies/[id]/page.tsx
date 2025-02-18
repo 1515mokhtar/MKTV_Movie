@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { notFound } from "next/navigation"
 import { Suspense, useState, useEffect } from "react"
-import { Dialog, DialogContent, DialogTrigger ,DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog"
 import { Calendar, Clock, Star, ChevronLeft, TrendingUp } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -18,12 +18,10 @@ import { useAuthState } from "react-firebase-hooks/auth"
 import { toast } from "react-hot-toast"
 import Loader2 from "@/components/icons/Loader2"
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
-import { ToastContainer } from "react-toastify";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
 
 async function getMovieDetails(id: string) {
-  const url = `https://api.themoviedb.org/3/movie/${id}?append_to_response=credits,similar,videos&language=en-US`;
+  const url = `https://api.themoviedb.org/3/movie/${id}?append_to_response=credits,similar,videos&language=en-US`
 
   const res = await fetch(url, {
     method: "GET",
@@ -32,35 +30,32 @@ async function getMovieDetails(id: string) {
       Authorization: `Bearer ${process.env.NEXT_PUBLIC_TMDB_API_KEY}`,
     },
     next: { revalidate: 60 * 60 * 24 },
-  });
+  })
 
   if (!res.ok) {
-    const errorData = await res.json();  // Get response data for debugging
-    console.error("Error fetching movie details:", errorData);
-    notFound();  // Can show an error page instead of a generic 'not found'
+    const errorData = await res.json() // Get response data for debugging
+    console.error("Error fetching movie details:", errorData)
+    notFound() // Can show an error page instead of a generic 'not found'
   }
 
-  return res.json();
+  return res.json()
 }
-
 
 function MovieInfo({ movie }: { movie: any }) {
   const router = useRouter()
   const [isTrailerOpen, setIsTrailerOpen] = useState(false)
-  const [user, loading] = useAuthState(auth) 
+  const [user, loading] = useAuthState(auth)
   const [isInWatchlist, setIsInWatchlist] = useState(false)
-  const [isLoginPopupOpen, setIsLoginPopupOpen] = useState(false) 
+  const [isLoginPopupOpen, setIsLoginPopupOpen] = useState(false)
   const [processing, setProcessing] = useState(false) // État pour gérer le chargement
-  const [genres, setGenres] = useState<Record<number, string>>({}) // Genre mapping: { id: name }
 
-  
   const handleLoginRedirect = () => {
-    router.push("/login")  // Rediriger l'utilisateur vers la page de login
+    router.push("/login") // Rediriger l'utilisateur vers la page de login
   }
-  
+
   useEffect(() => {
     if (!user || loading) return
-    
+
     const checkWatchlist = async () => {
       try {
         const docRef = doc(db, "watchlist", `${user.uid}_${movie.id}`)
@@ -71,32 +66,24 @@ function MovieInfo({ movie }: { movie: any }) {
         toast.error("Failed to check watchlist status")
       }
     }
-    
+
     checkWatchlist()
   }, [user, movie.id, loading])
 
-  
   const handleWatchNow = () => {
     router.push(`/watch/${movie.id}/player`)
   }
 
   const handleWatchlist = async () => {
     if (processing) return // Empêcher les clics multiples
-    
+
     if (!user) {
-      setIsLoginPopupOpen(true)
-      toast.success("the popup  open successfully")
-      // Show login popup if user is not logged in
-      return
-    }
-    else if (user)
-    {
-      setIsLoginPopupOpen(false)
+      setIsLoginPopupOpen(true) // Afficher la popup de connexion
       return
     }
 
     setProcessing(true)
-    
+
     try {
       const docRef = doc(db, "watchlist", `${user.uid}_${movie.id}`)
       const docSnap = await getDoc(docRef)
@@ -124,124 +111,108 @@ function MovieInfo({ movie }: { movie: any }) {
     }
   }
 
+  // Fermer la popup de connexion si l'utilisateur se connecte
+  useEffect(() => {
+    if (user) {
+      setIsLoginPopupOpen(false)
+    }
+  }, [user])
+
   return (
-
     <>
-    <ToastContainer position="top-right"  autoClose={3000} />
-
-    <div className="grid gap-8 md:grid-cols-[2fr,3fr] lg:gap-12">
-       
-      <div className="relative aspect-[2/3] w-full max-w-md mx-auto md:mx-0">
-        <Image
-          src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
-          alt={movie.title}
-          fill
-          className="object-cover rounded-lg shadow-lg"
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-        />
-      </div>
-      <div className="space-y-6">
-        <h1 className="text-4xl font-bold tracking-tight lg:text-5xl">{movie.title}</h1>
-        <div className="flex flex-wrap gap-2">
-          {movie.genres.map((genre: any) => (
-            <Badge key={genre.id} variant="secondary" className="px-3 py-1 text-sm">
-              {genre.name}
-            </Badge>
-          ))}
+      <div className="grid gap-8 md:grid-cols-[1fr,2fr] lg:grid-cols-[2fr,3fr] lg:gap-12">
+        <div className="relative aspect-[2/3] w-full max-w-[300px] mx-auto md:mx-0">
+          <Image
+            src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
+            alt={movie.title}
+            fill
+            className="object-cover rounded-lg shadow-lg"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          />
         </div>
-        <p className="text-lg text-muted-foreground leading-relaxed">{movie.overview}</p>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div className="flex flex-col items-center gap-2 p-4 bg-muted rounded-lg">
-            <Star className="w-6 h-6 text-yellow-400" />
-            <span className="text-lg font-semibold">{movie.vote_average.toFixed(1)}</span>
-            <span className="text-sm text-muted-foreground">Rating</span>
+        <div className="space-y-4 md:space-y-6">
+          <h1 className="text-4xl font-bold tracking-tight lg:text-5xl">{movie.title}</h1>
+          <div className="flex flex-wrap gap-2 text-sm md:text-base">
+            {movie.genres.map((genre: any) => (
+              <Badge key={genre.id} variant="secondary" className="px-3 py-1 text-sm md:text-base">
+                {genre.name}
+              </Badge>
+            ))}
           </div>
-          <div className="flex flex-col items-center gap-2 p-4 bg-muted rounded-lg">
-            <Calendar className="w-6 h-6 text-blue-500" />
-            <span className="text-lg font-semibold">{new Date(movie.release_date).getFullYear()}</span>
-            <span className="text-sm text-muted-foreground">Year</span>
+          <p className="text-lg text-muted-foreground leading-relaxed">{movie.overview}</p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:gap-4">
+            <div className="flex flex-col items-center gap-2 p-4 bg-muted rounded-lg">
+              <Star className="w-6 h-6 text-yellow-400" />
+              <span className="text-lg font-semibold">{movie.vote_average.toFixed(1)}</span>
+              <span className="text-sm text-muted-foreground">Rating</span>
+            </div>
+            <div className="flex flex-col items-center gap-2 p-4 bg-muted rounded-lg">
+              <Calendar className="w-6 h-6 text-blue-500" />
+              <span className="text-lg font-semibold">{new Date(movie.release_date).getFullYear()}</span>
+              <span className="text-sm text-muted-foreground">Year</span>
+            </div>
+            <div className="flex flex-col items-center gap-2 p-4 bg-muted rounded-lg">
+              <Clock className="w-6 h-6 text-green-500" />
+              <span className="text-lg font-semibold">{movie.runtime}</span>
+              <span className="text-sm text-muted-foreground">Minutes</span>
+            </div>
+            <div className="flex flex-col items-center gap-2 p-4 bg-muted rounded-lg">
+              <TrendingUp className="w-6 h-6 text-red-500" />
+              <span className="text-lg font-semibold">{movie.popularity.toFixed(0)}</span>
+              <span className="text-sm text-muted-foreground">Popularity</span>
+            </div>
           </div>
-          <div className="flex flex-col items-center gap-2 p-4 bg-muted rounded-lg">
-            <Clock className="w-6 h-6 text-green-500" />
-            <span className="text-lg font-semibold">{movie.runtime}</span>
-            <span className="text-sm text-muted-foreground">Minutes</span>
+          <div className="flex flex-wrap gap-3 md:gap-4">
+            <Dialog open={isTrailerOpen} onOpenChange={setIsTrailerOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 md:px-6 md:py-2 rounded-lg shadow-md transition-all text-sm md:text-base">
+                  Watch Trailer
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[800px]">
+                <VisuallyHidden>
+                  <DialogTitle>Trailer</DialogTitle>
+                </VisuallyHidden>
+                <div className="aspect-video">
+                  {movie.videos && movie.videos.results && movie.videos.results.length > 0 ? (
+                    <VideoPlayer url={`https://www.youtube.com/watch?v=${movie.videos.results[0].key}`} />
+                  ) : (
+                    <p>No trailer available</p>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Button className="text-sm md:text-base" onClick={handleWatchNow}>
+              Watch Now
+            </Button>
+            <Button className="text-sm md:text-base" variant="outline" onClick={handleWatchlist} disabled={processing}>
+              {processing ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Processing...
+                </div>
+              ) : isInWatchlist ? (
+                "Remove from Watchlist"
+              ) : (
+                "Add to Watchlist"
+              )}
+            </Button>
+            <Dialog open={isLoginPopupOpen} onOpenChange={setIsLoginPopupOpen}>
+              <DialogContent>
+                <p className="text-lg">You must be logged in to add movies to your watchlist.</p>
+                <Button onClick={handleLoginRedirect} className="mt-4">
+                  Login
+                </Button>
+              </DialogContent>
+            </Dialog>
           </div>
-          <div className="flex flex-col items-center gap-2 p-4 bg-muted rounded-lg">
-            <TrendingUp className="w-6 h-6 text-red-500" />
-            <span className="text-lg font-semibold">{movie.popularity.toFixed(0)}</span>
-            <span className="text-sm text-muted-foreground">Popularity</span>
-          </div>
-        </div>
-        <div className="flex gap-4">
-          <Dialog open={isTrailerOpen} onOpenChange={setIsTrailerOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg shadow-md transition-all">
-                Watch Trailer
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[800px]">
-              <VisuallyHidden>
-                      <DialogTitle>Trailer</DialogTitle>
-              </VisuallyHidden>
-              <div className="aspect-video">
-                {movie.videos && movie.videos.results && movie.videos.results.length > 0 ? (
-                  <VideoPlayer url={`https://www.youtube.com/watch?v=${movie.videos.results[0].key}`} />
-                ) : (
-                  <p>No trailer available</p>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
-          <Button size="lg" onClick={handleWatchNow}>
-            Watch Now
-          </Button>
-          <Dialog open={isLoginPopupOpen} onOpenChange={setIsLoginPopupOpen}>
-  <DialogTrigger asChild>
-  
-    <Button
-      size="lg"
-      variant="outline"
-      onClick={() => {
-        if (!user) {
-          setIsLoginPopupOpen(true); // Open the popup if user is not logged in
-        } else {
-          handleWatchlist(); // Execute normally if logged in
-        }
-      }}
-      disabled={processing}
-    >
-      {processing ? (
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Processing...
-        </div>
-      ) : isInWatchlist ? (
-        "Remove from Watchlist"
-      ) : (
-        "Add to Watchlist"
-      )}
-    </Button>
-  </DialogTrigger>
-  
-  {/* Show the dialog only if the user is not logged in */}
-  {isLoginPopupOpen && (
-    <DialogContent>
-      <p className="text-lg">You must be logged in to add movies to your watchlist.</p>
-      <Button onClick={handleLoginRedirect} className="mt-4">
-        Login
-      </Button>
-    </DialogContent>
-  )}
-</Dialog>
         </div>
       </div>
-    </div>
     </>
   )
 }
 
 function CastSection({ cast }: { cast: any[] }) {
-
   return (
     <section className="mt-12">
       <h2 className="text-3xl font-bold mb-6">Cast</h2>
@@ -272,45 +243,45 @@ function CastSection({ cast }: { cast: any[] }) {
 
 function SimilarMoviesSection({ similarMovies }: { similarMovies: any[] }) {
   return (
-    <section className="mt-12">
+    <section className="m-0 box-border">
       <h2 className="text-3xl font-bold mb-6">Similar Movies</h2>
       <Carousel
-      opts={{
-        align: "start",
-        loop: true,
-      }}
-      className="w-full"
-    >
-      <CarouselContent className="-ml-2 md:-ml-4 flex  items-center   ">
-
-        {similarMovies.slice(0, 12).map((movie) => (
-          
-        <CarouselItem key={movie.id} className="pl-2 md:pl-4 md:basis-1/4 lg:basis-1/5 ">
-          <Link href={`/movies/${movie.id}`} key={movie.id}>
-            <Card className="overflow-hidden transition-transform hover:scale-105">
-              <div className="relative aspect-[2/3]">
-                <Image
-                  src={
-                    movie.poster_path ? `https://image.tmdb.org/t/p/w200${movie.poster_path}` : "/placeholder-movie.png"
-                  }
-                  alt={movie.title}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 16vw"
-                />
-              </div>
-              <CardContent className="p-4">
-                <p className="font-semibold truncate">{movie.title}</p>
-                <p className="text-sm text-muted-foreground">{new Date(movie.release_date).getFullYear()}</p>
-              </CardContent>
-            </Card>
-          </Link>
-        </CarouselItem>
-        ))}
-      </CarouselContent>
-      <CarouselPrevious />
-      <CarouselNext />
-    </Carousel>
+        opts={{
+          align: "start",
+          loop: true,
+        }}
+        className="relative"
+      >
+        <CarouselContent className="-ml-2 md:-ml-4 flex  items-center   ">
+          {similarMovies.slice(0, 12).map((movie) => (
+            <CarouselItem key={movie.id} className="pl-2 md:pl-4 md:basis-1/4 lg:basis-1/5 ">
+              <Link href={`/movies/${movie.id}`} key={movie.id}>
+                <Card className="overflow-hidden transition-transform hover:scale-105">
+                  <div className="relative aspect-[2/3]">
+                    <Image
+                      src={
+                        movie.poster_path
+                          ? `https://image.tmdb.org/t/p/w200${movie.poster_path}`
+                          : "/placeholder-movie.png"
+                      }
+                      alt={movie.title}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 16vw"
+                    />
+                  </div>
+                  <CardContent className="p-4">
+                    <p className="font-semibold truncate">{movie.title}</p>
+                    <p className="text-sm text-muted-foreground">{new Date(movie.release_date).getFullYear()}</p>
+                  </CardContent>
+                </Card>
+              </Link>
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+        <CarouselPrevious />
+        <CarouselNext />
+      </Carousel>
     </section>
   )
 }
