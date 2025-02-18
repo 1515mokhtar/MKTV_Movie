@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { User, updateProfile, updateEmail, updatePhoneNumber } from "firebase/auth"
-import { doc, setDoc, getDoc ,updateDoc } from "firebase/firestore"
+import { doc, setDoc, getDoc ,updateDoc,collection,addDoc,serverTimestamp  } from "firebase/firestore"
 import { auth, db } from "@/lib/firebase" // Import auth and Firestore from your Firebase config
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Mail, LogOut, Edit } from "lucide-react"
+import { signOut } from "firebase/auth";
 import { toast } from "sonner" // For toast notifications
 import {
   Dialog,
@@ -62,24 +63,43 @@ export default function ProfilePage() {
         phoneVerified: false,
       })
     }
-  }
+  } 
 
   const handleSignOut = async () => {
+    
+  
     try {
-      // Mise à jour de l'état de l'utilisateur dans Firestore avant la déconnexion
+      // Récupérer l'utilisateur actuel
       const user = auth.currentUser;
+  
       if (user) {
+        // Référence au document de l'utilisateur dans la collection "users"
         const userRef = doc(db, "users", user.uid);
+  
+        // Mettre à jour l'état de l'utilisateur dans Firestore
         await updateDoc(userRef, { eta: "disconnected" });
   
-        // Déconnexion de l'utilisateur
-        await auth.signOut();
-        router.push("/"); // Redirection vers la page d'accueil
+        // Référence à la sous-collection "historique" de l'utilisateur
+        const historiqueRef = collection(userRef, "historique");
+  
+        // Ajouter un document à la sous-collection "historique" avec la date et l'heure de déconnexion
+        await addDoc(historiqueRef, {
+          date: serverTimestamp(), // Utiliser serverTimestamp pour la date et l'heure exactes
+          etat: "deconnexion",
+        });
+  
+        // Déconnecter l'utilisateur
+        await signOut(auth);
+  
+        // Rediriger vers la page d'accueil
+        router.push("/");
       }
     } catch (error) {
       console.error("Erreur lors de la déconnexion", error);
     }
-  }
+  };
+  
+
 
   const handleEditProfile = async () => {
     if (!user) return

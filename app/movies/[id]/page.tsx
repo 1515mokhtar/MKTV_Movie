@@ -252,9 +252,9 @@ function SimilarMoviesSection({ similarMovies }: { similarMovies: any[] }) {
         }}
         className="relative"
       >
-        <CarouselContent className="-ml-2 md:-ml-4 flex  items-center   ">
+        <CarouselContent className="-ml-2 md:-ml-4 flex items-center">
           {similarMovies.slice(0, 12).map((movie) => (
-            <CarouselItem key={movie.id} className="pl-2 md:pl-4 md:basis-1/4 lg:basis-1/5 ">
+            <CarouselItem key={movie.id} className="pl-2 md:pl-4 md:basis-1/4 lg:basis-1/5">
               <Link href={`/movies/${movie.id}`} key={movie.id}>
                 <Card className="overflow-hidden transition-transform hover:scale-105">
                   <div className="relative aspect-[2/3]">
@@ -279,8 +279,8 @@ function SimilarMoviesSection({ similarMovies }: { similarMovies: any[] }) {
             </CarouselItem>
           ))}
         </CarouselContent>
-        <CarouselPrevious />
-        <CarouselNext />
+        <CarouselPrevious className="hidden md:flex" />
+        <CarouselNext className="hidden md:flex" />
       </Carousel>
     </section>
   )
