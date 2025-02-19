@@ -141,22 +141,24 @@ const filteredByYear =
       }}
       className="w-full"
     >
-      <CarouselContent className="-ml-2 md:-ml-4 flex  items-center   ">
+      <CarouselContent className="-ml-2 md:-ml-4">
         {movies.map((movie) => (
-          <CarouselItem key={movie.id} className="pl-2 md:pl-4 md:basis-1/4 lg:basis-1/5 ">
-            <MovieCard
-              key={movie.id}
-              title={movie.title}
-              genre={movie.genre}
-              releaseDate={new Date(movie.releaseDate).getFullYear().toString()}
-              poster={movie.poster}
-              id={movie.id}
-            />
+          <CarouselItem key={movie.id} className="pl-2 md:pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5">
+            <div className="transform transition-all duration-300 hover:scale-105">
+              <MovieCard
+                title={movie.title}
+                genre={movie.genre}
+                releaseDate={new Date(movie.releaseDate).getFullYear().toString()}
+                poster={movie.poster}
+                id={movie.id}
+              />
+            </div>
           </CarouselItem>
         ))}
       </CarouselContent>
-      <CarouselPrevious />
-      <CarouselNext />
+      <CarouselPrevious className="hidden sm:flex" />
+      <CarouselNext className="hidden sm:hidden md:hidden lg:flex" />
+
     </Carousel>
   )
 }

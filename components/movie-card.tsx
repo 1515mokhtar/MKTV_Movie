@@ -17,27 +17,26 @@ export function MovieCard({ id ,title, genre, releaseDate, poster }: MovieCardPr
 
   return (
     
-    <Card className="overflow-hidden bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
-      <Link  href={`/movies/${id.toString()}`}>
+    <Card className="overflow-hidden bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50 transition-all duration-300 hover:shadow-lg">
+    <Link href={`/movies/${id}`} className="focus:outline-none focus:ring-2 focus:ring-primary rounded-lg">
       <CardHeader className="p-0">
-        <div className="aspect-[2/3] relative overflow-hidden">
+        <div className="aspect-[2/3] relative overflow-hidden rounded-t-lg">
           <Image
-            src={ poster|| "/placeholder.svg"}
+            src={poster || "/placeholder.svg"}
             alt={`${title} poster`}
             fill
-            className="object-cover transition-transform hover:scale-105"
+            className="object-cover transition-transform duration-300 hover:scale-105"
           />
         </div>
       </CardHeader>
-     
-      <CardContent className="p-4">
-        <h3 className="font-semibold truncate">{title}</h3>
-        <p className="text-sm text-muted-foreground">
+      <CardContent className="p-3 sm:p-4">
+        <h3 className="font-semibold truncate text-sm sm:text-base">{title}</h3>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
           {releaseDate} • {genre}
         </p>
       </CardContent>
-      </Link>
-    </Card>
+    </Link>
+  </Card>
   )
 }
 

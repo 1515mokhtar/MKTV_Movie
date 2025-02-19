@@ -19,6 +19,7 @@ import { toast } from "react-hot-toast"
 import Loader2 from "@/components/icons/Loader2"
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
+import { MovieCard ,card , CardHeader} from "@/components/movie-card"
 
 async function getMovieDetails(id: string) {
   const url = `https://api.themoviedb.org/3/movie/${id}?append_to_response=credits,similar,videos&language=en-US`
@@ -97,6 +98,9 @@ function MovieInfo({ movie }: { movie: any }) {
           userId: user.uid,
           movieId: movie.id,
           title: movie.title,
+          rater:movie.vote_average.toFixed(1),
+          releaseDate: movie.release_date,
+          genre: movie.genres.map((genre: any) => ({ id: genre.id, name: genre.name })),
           posterPath: movie.poster_path,
           addedAt: new Date(),
         })
@@ -252,27 +256,23 @@ function SimilarMoviesSection({ similarMovies }: { similarMovies: any[] }) {
         }}
         className="relative"
       >
-        <CarouselContent className="-ml-2 md:-ml-4 flex items-center">
+        <CarouselContent className="-ml-2 md:-ml-4">
           {similarMovies.slice(0, 12).map((movie) => (
-            <CarouselItem key={movie.id} className="pl-2 md:pl-4 md:basis-1/4 lg:basis-1/5">
-              <Link href={`/movies/${movie.id}`} key={movie.id}>
-                <Card className="overflow-hidden transition-transform hover:scale-105">
-                  <div className="relative aspect-[2/3]">
+            <CarouselItem key={movie.id} className="pl-2 md:pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5">
+              <Link href={`/movies/${movie.id}`}>
+                <Card className="overflow-hidden">
+                  <div className="relative w-full h-full aspect-[2/3]">
                     <Image
-                      src={
-                        movie.poster_path
-                          ? `https://image.tmdb.org/t/p/w200${movie.poster_path}`
-                          : "/placeholder-movie.png"
-                      }
-                      alt={movie.title}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 16vw"
+                      src={movie?.poster_path ? `https://image.tmdb.org/t/p/w200${movie.poster_path}` : "/placeholder.png"}
+                      alt={movie?.title || "Movie Poster"}
+                      width={200}
+                      height={300}
+                      className="object-cover w-full h-full"
                     />
                   </div>
                   <CardContent className="p-4">
                     <p className="font-semibold truncate">{movie.title}</p>
-                    <p className="text-sm text-muted-foreground">{new Date(movie.release_date).getFullYear()}</p>
+                    <p className="text-sm text-muted-foreground truncate">{new Date(movie.release_date).getFullYear()}</p>
                   </CardContent>
                 </Card>
               </Link>
@@ -280,10 +280,10 @@ function SimilarMoviesSection({ similarMovies }: { similarMovies: any[] }) {
           ))}
         </CarouselContent>
         <CarouselPrevious className="hidden md:flex" />
-        <CarouselNext className="hidden md:flex" />
+        <CarouselNext className="hidden lg:flex" />
       </Carousel>
     </section>
-  )
+  );
 }
 
 function MoviePage({ movie }: { movie: any }) {
