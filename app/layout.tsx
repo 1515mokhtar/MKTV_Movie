@@ -3,11 +3,11 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
-import { Header } from "@/components/header"
+import  {Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { AuthProvider } from './contexts/AuthContext'
 import type React from "react" // Added import for React
-import { ToastContainer } from 'react-toastify';
+
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
@@ -42,7 +42,6 @@ export default function RootLayout({
       
       <body className={`${inter.className} min-h-screen bg-background`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-        <ToastContainer />
         <AuthProvider>
         <Header />
           <main>{children}</main>

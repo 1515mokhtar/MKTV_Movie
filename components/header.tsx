@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -17,11 +19,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Search, User, LogOut, Menu } from "lucide-react"
+import { Search, User, LogOut, Menu, Film, Tv } from "lucide-react"
 import Link from "next/link"
-import { useState, useRef, type FormEvent } from "react"
+import { useState, useRef, type FormEvent, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/app/contexts/AuthContext"
+import { addDoc, collection, doc, serverTimestamp, updateDoc } from "firebase/firestore"
+import { signOut } from "firebase/auth"
+import { auth, db } from "@/lib/firebase"
+
+interface SearchResult {
+  popularity: number
+  id: number
+  title?: string
+  name?: string
+  poster_path: string
+  media_type?: string
+}
 
 interface HeaderProps {
   onSearch?: (query: string) => void
@@ -30,33 +44,66 @@ interface HeaderProps {
 
 export function Header({ onSearch, initialSearchResults }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState("")
-  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
 
-  const performSearch = async (query: string) => {
+  // For double-click detection
+  const [lastClickTime, setLastClickTime] = useState(0)
+  const [lastKeyPressTime, setLastKeyPressTime] = useState(0)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const searchButtonRef = useRef<HTMLButtonElement>(null)
+
+  const performSearch = async (query: string, searchType = "both") => {
+    if (!query.trim()) return
+
     setIsLoading(true)
     setError(null)
     try {
-      const url = `https://api.themoviedb.org/3/search/movie?include_adult=false&language=en-US&page=1&query=${encodeURIComponent(query)}`;
-      const options = {
-        method: 'GET',
-        headers: {
-          accept: 'application/json',
-          Authorization: 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0NzgxYWE1NWExYmYzYzZlZjA1ZWUwYmMwYTk0ZmNiYyIsIm5iZiI6MTczODcwNDY2Mi4wMDMsInN1YiI6IjY3YTI4NzE1N2M4NjA5NjAyOThhNjBmNiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.kGBXkjuBtqgKXEGMVRWJ88LUWg_lykPOyBZKoOIBmcc'
-        }
-      };
+      // Search for movies
+      const movieUrl = `https://api.themoviedb.org/3/search/movie?include_adult=false&language=en-US&page=1&query=${encodeURIComponent(query)}`
+      const tvUrl = `https://api.themoviedb.org/3/search/tv?include_adult=false&language=en-US&page=1&query=${encodeURIComponent(query)}`
 
-      const response = await fetch(url, options)
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+      const options = {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+          Authorization:
+            "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0NzgxYWE1NWExYmYzYzZlZjA1ZWUwYmMwYTk0ZmNiYyIsIm5iZiI6MTczODcwNDY2Mi4wMDMsInN1YiI6IjY3YTI4NzE1N2M4NjA5NjAyOThhNjBmNiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.kGBXkjuBtqgKXEGMVRWJ88LUWg_lykPOyBZKoOIBmcc",
+        },
       }
-      const data = await response.json()
-      setSearchResults(data.results)
+
+      let results: SearchResult[] = []
+
+      if (searchType === "both" || searchType === "movie") {
+        const movieResponse = await fetch(movieUrl, options)
+        if (!movieResponse.ok) {
+          throw new Error(`HTTP error! status: ${movieResponse.status}`)
+        }
+        const movieData = await movieResponse.json()
+        // Add media_type to each result
+        results = [...results, ...movieData.results.map((item: any) => ({ ...item, media_type: "movie" }))]
+      }
+
+      if (searchType === "both" || searchType === "tv") {
+        const tvResponse = await fetch(tvUrl, options)
+        if (!tvResponse.ok) {
+          throw new Error(`HTTP error! status: ${tvResponse.status}`)
+        }
+        const tvData = await tvResponse.json()
+        // Add media_type to each result
+        results = [...results, ...tvData.results.map((item: any) => ({ ...item, media_type: "tv" }))]
+      }
+
+      // Sort by popularity if available
+      results.sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+
+      // Limit to top 10 for dropdown
+      setSearchResults(results.slice(0, 10))
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -66,10 +113,52 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
 
   const handleSearchSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (onSearch) {
-      onSearch(searchQuery)
+
+    const now = Date.now()
+    const isDoubleClick = now - lastClickTime < 500
+    setLastClickTime(now)
+
+    if (isDoubleClick) {
+      // Navigate to full search results page
+      router.push(`/search-results?query=${encodeURIComponent(searchQuery)}`)
+      setIsSearchFocused(false)
     } else {
+      // Regular search
+      if (onSearch) {
+        onSearch(searchQuery)
+      } else {
+        performSearch(searchQuery)
+      }
+    }
+  }
+
+  const handleSearchButtonClick = () => {
+    const now = Date.now()
+    const isDoubleClick = now - lastClickTime < 500
+    setLastClickTime(now)
+
+    if (isDoubleClick) {
+      // Navigate to full search results page
+      router.push(`/search-results?query=${encodeURIComponent(searchQuery)}`)
+      setIsSearchFocused(false)
+    } else if (searchQuery.trim()) {
+      // Regular search
       performSearch(searchQuery)
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      const now = Date.now()
+      const isDoubleEnter = now - lastKeyPressTime < 500
+      setLastKeyPressTime(now)
+
+      if (isDoubleEnter) {
+        e.preventDefault()
+        // Navigate to full search results page
+        router.push(`/search-results?query=${encodeURIComponent(searchQuery)}`)
+        setIsSearchFocused(false)
+      }
     }
   }
 
@@ -81,8 +170,16 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
     }, 100)
   }
 
-  const handleMovieClick = (movieId: number) => {
-    router.push(`/movies/${movieId}`)
+  const handleResultClick = (result: SearchResult) => {
+    const mediaType = result.media_type || "movie"
+    const id = result.id
+
+    if (mediaType === "movie") {
+      router.push(`/movies/${id}`)
+    } else if (mediaType === "tv") {
+      router.push(`/series/${id}`)
+    }
+
     setSearchQuery("")
     setIsSearchFocused(false)
     setSearchResults([])
@@ -90,25 +187,38 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      await signOut(auth)
 
       // Mettre à jour l'état de l'utilisateur dans Firestore
-      const userRef = doc(db, "users", auth.currentUser?.uid!);
-      await updateDoc(userRef, { eta: "disconnected" });
+      const userRef = doc(db, "users", auth.currentUser?.uid!)
+      await updateDoc(userRef, { eta: "disconnected" })
 
       // Ajouter l'historique de la déconnexion
-      const historiqueRef = collection(userRef, "historique");
+      const historiqueRef = collection(userRef, "historique")
       await addDoc(historiqueRef, {
         date: serverTimestamp(),
         etat: "deconnexion",
-      });
+      })
 
       // Redirection vers la page de login après la déconnexion
-      router.push("/login");
+      router.push("/login")
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message)
     }
-  };
+  }
+
+  // Effect to perform search when query changes
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      const debounceTimer = setTimeout(() => {
+        performSearch(searchQuery)
+      }, 800) // Augmenté de 300ms à 800ms pour donner plus de temps à l'utilisateur
+
+      return () => clearTimeout(debounceTimer)
+    } else {
+      setSearchResults([])
+    }
+  }, [searchQuery])
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -120,42 +230,93 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
         <div ref={wrapperRef} className="relative flex-1 md:max-w-96">
           <form onSubmit={handleSearchSubmit} className="flex gap-2">
             <Input
+              ref={searchInputRef}
               type="search"
-              placeholder="Search movies..."
+              placeholder="Search movies & series..."
               className="w-full"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setIsSearchFocused(true)}
               onBlur={handleInputBlur}
+              onKeyDown={handleKeyDown}
               disabled={isLoading}
             />
-            <Button type="submit" size="icon" variant="ghost" disabled={isLoading}>
+            <Button
+              ref={searchButtonRef}
+              type="button"
+              size="icon"
+              variant="ghost"
+              disabled={isLoading}
+              onClick={handleSearchButtonClick}
+            >
               <Search className="h-4 w-4" />
             </Button>
           </form>
 
           {isSearchFocused && (
-            <div className="absolute top-full left-0 w-full bg-background rounded-md shadow-md">
+            <div className="absolute top-full left-0 w-full bg-background rounded-md shadow-md z-50">
               {isLoading ? (
                 <div className="p-4 text-center">Loading...</div>
               ) : error ? (
                 <div className="p-4 text-center text-red-500">{error}</div>
               ) : searchResults.length === 0 ? (
-                <div className="p-4 text-center">No results found.</div>
+                searchQuery.trim() ? (
+                  <div className="p-4 text-center">No results found.</div>
+                ) : null
               ) : (
                 <ul className="max-h-60 overflow-y-auto">
-                  {searchResults.map((result: any) => (
+                  {searchResults.map((result) => (
                     <li
                       key={result.id}
-                      onClick={() => handleMovieClick(result.id)}
-                      className="cursor-pointer p-2 hover:bg-primary flex  justify-between"
+                      onClick={() => handleResultClick(result)}
+                      className="cursor-pointer p-2 hover:bg-muted/50 flex items-center gap-3"
                     >
-                      <img  width={40} height={40} src={`https://image.tmdb.org/t/p/w500${result.poster_path}`} alt={result.title} /> 
-                     <div>
-                     {result.title}
-                     </div>
+                      <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded">
+                        {result.poster_path ? (
+                          <img
+                            src={`https://image.tmdb.org/t/p/w92${result.poster_path}`}
+                            alt={result.title || result.name || "Media"}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="h-full w-full bg-muted flex items-center justify-center">
+                            {result.media_type === "movie" ? (
+                              <Film className="h-5 w-5 text-muted-foreground" />
+                            ) : (
+                              <Tv className="h-5 w-5 text-muted-foreground" />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate font-medium">{result.title || result.name}</p>
+                      </div>
+                      <div className="flex-shrink-0 px-2 py-1 rounded-full bg-muted text-xs font-medium">
+                        {result.media_type === "movie" ? (
+                          <span className="flex items-center gap-1">
+                            <Film className="h-3 w-3" />
+                            Film
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1">
+                            <Tv className="h-3 w-3" />
+                            Série
+                          </span>
+                        )}
+                      </div>
                     </li>
                   ))}
+                  {searchQuery.trim() && (
+                    <li className="p-2 text-center border-t">
+                      <Button
+                        variant="link"
+                        className="w-full"
+                        onClick={() => router.push(`/search-results?query=${encodeURIComponent(searchQuery)}`)}
+                      >
+                        Voir tous les résultats
+                      </Button>
+                    </li>
+                  )}
                 </ul>
               )}
             </div>
@@ -242,11 +403,15 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
           <DropdownMenuContent align="end" className="w-56">
             {user ? (
               <>
-                <DropdownMenuItem  className="hover:bg-primary">
-                  <Link  className="w-full" href="/profile">Profile</Link>
+                <DropdownMenuItem className="hover:bg-primary">
+                  <Link className="w-full" href="/profile">
+                    Profile
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
-                  <Link   className="w-full" href="/settings">Settings</Link>
+                  <Link className="w-full" href="/settings">
+                    Settings
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>Log out</DropdownMenuItem>
@@ -254,10 +419,14 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
             ) : (
               <>
                 <DropdownMenuItem>
-                  <Link className="w-full" href="/login">Log in</Link>
+                  <Link className="w-full" href="/login">
+                    Log in
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
-                  <Link className="w-full" href="/signup">Sign up</Link>
+                  <Link className="w-full" href="/signup">
+                    Sign up
+                  </Link>
                 </DropdownMenuItem>
               </>
             )}
@@ -267,3 +436,4 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
     </header>
   )
 }
+

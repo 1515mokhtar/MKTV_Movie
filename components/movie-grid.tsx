@@ -154,12 +154,7 @@ export function MovieGrid({ type, orderBy = "date", searchQuery = "" }: MovieGri
  console.log("movies", movies)
   return (
     <div className="space-y-6">
-      <MovieFilters
-        genres={genreList}
-        onGenreChange={setSelectedGenre}
-        onYearChange={setSelectedYear}
-        onSortChange={setSelectedSort}
-      />
+      
       {loading ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {Array.from({ length: 10 }).map((_, index) => (

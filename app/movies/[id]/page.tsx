@@ -19,7 +19,7 @@ import { toast } from "react-hot-toast"
 import Loader2 from "@/components/icons/Loader2"
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
-import { MovieCard ,card , CardHeader} from "@/components/movie-card"
+import { MovieCard } from "@/components/movie-card"
 
 async function getMovieDetails(id: string) {
   const url = `https://api.themoviedb.org/3/movie/${id}?append_to_response=credits,similar,videos&language=en-US`
