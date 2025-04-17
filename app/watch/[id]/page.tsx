@@ -1,126 +1,110 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
+import { useParams } from "next/navigation"
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
+import { Loader2 } from 'lucide-react'
 
-interface MovieDetails {
-  id: number
-  title: string
-  overview: string
-  poster_path: string
-  release_date: string
-  genres: { id: number; name: string }[]
-  runtime?: number
-  number_of_seasons?: number
-  number_of_episodes?: number
+interface MovieData {
+  name: string
+  urlmovie: string
 }
 
-export default function MovieDetailsPage() {
-  const { id } = useParams()
-  const router = useRouter()
-  const [details, setDetails] = useState<MovieDetails | null>(null)
+// Simuler des serveurs alternatifs
+const mockServers = [
+  { id: 1, name: 'Serveur 1', quality: 'HD' },
+  { id: 2, name: 'Serveur 2', quality: 'Full HD' },
+  { id: 3, name: 'Serveur 3', quality: '4K' },
+]
+
+export default function WatchPage() {
+  const params = useParams()
+  const [movie, setMovie] = useState<MovieData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const fetchDetails = async () => {
-      setLoading(true)
+    const fetchMovie = async () => {
       try {
-        // First, try to fetch as a movie
-        let url = `https://api.themoviedb.org/3/movie/${id}?language=en-US`
-        let response = await fetch(url, {
-          headers: {
-            accept: "application/json",
-            Authorization:
-              "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0NzgxYWE1NWExYmYzYzZlZjA1ZWUwYmMwYTk0ZmNiYyIsIm5iZiI6MTczODcwNDY2Mi4wMDMsInN1YiI6IjY3YTI4NzE1N2M4NjA5NjAyOThhNjBmNiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.kGBXkjuBtqgKXEGMVRWJ88LUWg_lykPOyBZKoOIBmcc",
-          },
-        })
-
-        if (!response.ok) {
-          // If not found as a movie, try as a TV series
-          url = `https://api.themoviedb.org/3/tv/${id}?language=en-US`
-          response = await fetch(url, {
-            headers: {
-              accept: "application/json",
-              Authorization:
-                "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0NzgxYWE1NWExYmYzYzZlZjA1ZWUwYmMwYTk0ZmNiYyIsIm5iZiI6MTczODcwNDY2Mi4wMDMsInN1YiI6IjY3YTI4NzE1N2M4NjA5NjAyOThhNjBmNiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.kGBXkjuBtqgKXEGMVRWJ88LUWg_lykPOyBZKoOIBmcc",
-            },
-          })
-
-          if (!response.ok) {
-            throw new Error("Movie or series not found")
-          }
+        console.log('Fetching movie with ID:', params.id)
+        const docRef = doc(db, 'movies', params.id as string)
+        console.log('Document reference created:', docRef.path)
+        
+        const docSnap = await getDoc(docRef)
+        console.log('Document snapshot:', docSnap.exists() ? 'exists' : 'does not exist')
+        
+        if (docSnap.exists()) {
+          const movieData = docSnap.data() as MovieData
+          console.log('Movie data:', movieData)
+          setMovie(movieData)
+        } else {
+          console.log('Movie not found in Firestore')
+          setError('Film non trouvé dans la base de données')
         }
-
-        const data = await response.json()
-        setDetails(data)
       } catch (err) {
-        setError("Failed to fetch details")
-        console.error(err)
+        console.error('Error fetching movie:', err)
+        setError('Erreur lors de la récupération du film: ' + (err as Error).message)
       } finally {
         setLoading(false)
       }
     }
 
-    if (id) {
-      fetchDetails()
-    }
-  }, [id])
+    fetchMovie()
+  }, [params.id])
 
   if (loading) {
-    return <div className="flex justify-center items-center h-screen">Loading...</div>
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
   }
 
-  if (error || !details) {
-    return <div className="flex justify-center items-center h-screen">Error: {error || "Failed to load details"}</div>
-  }
-
-  const isMovie = "runtime" in details
-
-  const handleWatchClick = () => {
-    router.push(`/watch/${id}/player`)
+  if (error || !movie) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-red-500">{error || 'Film non trouvé'}</p>
+      </div>
+    )
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row gap-8">
-        <div className="md:w-1/3">
-          <img
-            src={`https://image.tmdb.org/t/p/w500${details.poster_path}`}
-            alt={details.title}
-            className="w-full rounded-lg shadow-lg"
-          />
+      <h1 className="text-2xl font-bold mb-6">{movie.name}</h1>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Zone vidéo principale */}
+        <div className="lg:col-span-2">
+          <div className="aspect-video w-full">
+            <iframe
+              src={movie.urlmovie}
+              className="w-full h-full rounded-lg"
+              allowFullScreen
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            />
+          </div>
         </div>
-        <div className="md:w-2/3">
-          <h1 className="text-3xl font-bold mb-4">{details.title}</h1>
-          <p className="text-gray-600 mb-4">{details.overview}</p>
-          <div className="mb-4">
-            <span className="font-semibold">Genre:</span> {details.genres.map((g) => g.name).join(", ")}
+
+        {/* Liste des serveurs */}
+        <div className="lg:col-span-1">
+          <h2 className="text-xl font-semibold mb-4">Serveurs disponibles</h2>
+          <div className="space-y-4">
+            {mockServers.map((server) => (
+              <button
+                key={server.id}
+                className="w-full p-4 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-left"
+                onClick={() => {
+                  // Ici, vous pourriez changer l'URL du film en fonction du serveur
+                  // Pour l'exemple, nous gardons la même URL
+                  window.location.href = `/watch/${params.id}?server=${server.id}`
+                }}
+              >
+                <div className="font-medium">{server.name}</div>
+                <div className="text-sm text-gray-400">{server.quality}</div>
+              </button>
+            ))}
           </div>
-          <div className="mb-4">
-            <span className="font-semibold">Release Date:</span> {details.release_date}
-          </div>
-          {isMovie ? (
-            <div className="mb-4">
-              <span className="font-semibold">Runtime:</span> {details.runtime} minutes
-            </div>
-          ) : (
-            <>
-              <div className="mb-4">
-                <span className="font-semibold">Seasons:</span> {details.number_of_seasons}
-              </div>
-              <div className="mb-4">
-                <span className="font-semibold">Episodes:</span> {details.number_of_episodes}
-              </div>
-            </>
-          )}
-          <Button
-            onClick={handleWatchClick}
-            className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-          >
-            {isMovie ? "Watch Movie" : "Watch Series"}
-          </Button>
         </div>
       </div>
     </div>

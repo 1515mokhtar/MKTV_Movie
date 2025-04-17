@@ -72,7 +72,7 @@ function MovieInfo({ movie }: { movie: any }) {
   }, [user, movie.id, loading])
 
   const handleWatchNow = () => {
-    router.push(`/watch/${movie.id}/player`)
+    router.push(`/watch/${movie.id}`);
   }
 
   const handleWatchlist = async () => {

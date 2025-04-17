@@ -35,6 +35,7 @@ interface SearchResult {
   name?: string
   poster_path: string
   media_type?: string
+  user?:boolean
 }
 
 interface HeaderProps {
@@ -50,8 +51,9 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
-  const { user } = useAuth()
+  const user  = useAuth()
 
+  
   // For double-click detection
   const [lastClickTime, setLastClickTime] = useState(0)
   const [lastKeyPressTime, setLastKeyPressTime] = useState(0)
