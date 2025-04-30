@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import { useParams, useSearchParams } from "next/navigation"
-import { doc, getDoc } from "firebase/firestore"
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import {
   ChevronLeft,
@@ -38,16 +38,21 @@ import { useComments } from "@/hooks/use-comments"
 import { useSimilarMovies } from "@/hooks/use-similar-movies"
 import { formatDistanceToNow } from "date-fns"
 import { fr } from "date-fns/locale"
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
+import { Card, CardContent } from "@/components/ui/card"
 
 interface MovieData {
+  id: string
   name: string
   urlmovie: string
+  movieId?: string
   description?: string
   year?: number
-  duration?: string
   genres?: string[]
   rating?: number
   thumbnail?: string
+  createdAt?: string
+  duration?: string
 }
 
 interface RelatedMovie {
@@ -58,31 +63,13 @@ interface RelatedMovie {
   duration?: string
 }
 
-interface ServerOption {
-  id: number
-  name: string
-  quality: string
-  isPremium?: boolean
-}
-
 interface Comment {
-  id: string
-  user: {
-    name: string
-    avatar: string
-  }
-  text: string
-  timestamp: string
-  likes: number
+  id: string;
+  author: string;
+  content: string;
+  timestamp: Date;
+  avatar: string;
 }
-
-// Enhanced server options
-const serverOptions: ServerOption[] = [
-  { id: 1, name: "Serveur Rapide", quality: "HD 720p" },
-  { id: 2, name: "Serveur Premium", quality: "Full HD 1080p", isPremium: true },
-  { id: 3, name: "Serveur Ultra", quality: "4K HDR", isPremium: true },
-  { id: 4, name: "Serveur Léger", quality: "SD 480p" },
-]
 
 // Mock related movies
 const mockRelatedMovies: RelatedMovie[] = [
@@ -113,39 +100,94 @@ const mockRelatedMovies: RelatedMovie[] = [
 // Mock comments
 const mockComments: Comment[] = [
   {
-    id: "c1",
-    user: { name: "Alex", avatar: "/placeholder.svg?height=40&width=40" },
-    text: "Ce film est incroyable, les effets spéciaux sont à couper le souffle !",
-    timestamp: "2 heures",
-    likes: 24,
+    id: "1",
+    author: "John Doe",
+    content: "Great movie! The cinematography was amazing.",
+    timestamp: new Date(),
+    avatar: "https://i.pravatar.cc/150?img=1"
   },
   {
-    id: "c2",
-    user: { name: "Sophie", avatar: "/placeholder.svg?height=40&width=40" },
-    text: "J'ai adoré l'intrigue et les rebondissements. À voir absolument !",
-    timestamp: "5 heures",
-    likes: 18,
+    id: "2",
+    author: "Jane Smith",
+    content: "I loved the plot twist in the middle. Didn't see that coming!",
+    timestamp: new Date(),
+    avatar: "https://i.pravatar.cc/150?img=2"
   },
   {
-    id: "c3",
-    user: { name: "Thomas", avatar: "/placeholder.svg?height=40&width=40" },
-    text: "La bande sonore est exceptionnelle, elle accompagne parfaitement les scènes d'action.",
-    timestamp: "1 jour",
-    likes: 42,
-  },
+    id: "3",
+    author: "Mike Johnson",
+    content: "The soundtrack was perfect for this film.",
+    timestamp: new Date(),
+    avatar: "https://i.pravatar.cc/150?img=3"
+  }
 ]
+
+function SimilarMoviesSection({ similarMovies, loading, error }: { similarMovies: any[], loading: boolean, error: string | null }) {
+  if (error) {
+    return (
+      <div className="text-red-500 text-center py-4">
+        Error loading similar movies: {error}
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="animate-pulse">
+            <div className="aspect-[2/3] bg-gray-800 rounded-lg mb-2"></div>
+            <div className="h-4 bg-gray-800 rounded w-3/4 mb-2"></div>
+            <div className="h-4 bg-gray-800 rounded w-1/2"></div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (!similarMovies || similarMovies.length === 0) {
+    return (
+      <div className="text-gray-400 text-center py-4">
+        No similar movies found
+      </div>
+    )
+  }
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      {similarMovies.map((movie) => (
+        <div key={movie.id} className="group">
+          <div className="aspect-[2/3] relative overflow-hidden rounded-lg mb-2">
+            <img
+              src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
+              alt={movie.title}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+          </div>
+          <h3 className="font-medium text-sm line-clamp-1">{movie.title}</h3>
+          <p className="text-gray-400 text-xs">
+            {movie.release_date?.split("-")[0]}
+          </p>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 export default function WatchPage() {
   const params = useParams()
   const searchParams = useSearchParams()
-  const serverId = searchParams.get("server") || "1"
   const { toast } = useToast()
   const isMobile = useIsMobile()
   const { user } = useAuth()
-  const { comments, loading: commentsLoading, addComment, likeComment, dislikeComment } = useComments(params.id as string)
-  const { similarMovies, loading: similarLoading } = useSimilarMovies(params.id as string)
-
   const [movie, setMovie] = useState<MovieData | null>(null)
+  const { comments, loading: commentsLoading, addComment, likeComment, dislikeComment } = useComments(params.id as string)
+  const [tmdbId, setTmdbId] = useState<string>("")
+  const { similarMovies, loading: similarLoading, error: similarError } = useSimilarMovies(tmdbId)
+
+  console.log("TMDB ID:", tmdbId)
+  console.log("Similar movies:", similarMovies)
+
   const [relatedMovies, setRelatedMovies] = useState<RelatedMovie[]>(mockRelatedMovies)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -169,41 +211,110 @@ export default function WatchPage() {
     }
   }
 
-  useEffect(() => {
-    const fetchMovie = async () => {
-      try {
-        const docRef = doc(db, "movies", params.id as string)
-        const docSnap = await getDoc(docRef)
+  const fetchMovie = async () => {
+    if (!params.id) return
 
-        if (docSnap.exists()) {
-          const movieData = docSnap.data() as MovieData
-          setMovie(movieData)
-        } else {
-          setError("Film non trouvé dans la base de données")
+    try {
+      const movieRef = doc(db, "movies", params.id as string)
+      const movieDoc = await getDoc(movieRef)
+
+      if (movieDoc.exists()) {
+        const movieData = movieDoc.data() as MovieData
+        setMovie(movieData)
+        
+        // Vérifier si nous avons déjà un movieId (tmdbId)
+        if (movieData.movieId) {
+          setTmdbId(movieData.movieId)
+          console.log("Using existing movieId:", movieData.movieId)
+        } else if (movieData.name) {
+          // Si nous n'avons pas de movieId mais que nous avons un nom, chercher le tmdbId
+          console.log("Fetching tmdbId for movie:", movieData.name)
+          await fetchTmdbId(movieData.name)
         }
-      } catch (err) {
-        console.error("Error fetching movie:", err)
-        setError("Erreur lors de la récupération du film: " + (err as Error).message)
-      } finally {
-        setLoading(false)
+      } else {
+        // Créer un nouveau document si le film n'existe pas
+        const newMovieData: MovieData = {
+          id: params.id as string,
+          name: searchParams.get("name") || "",
+          urlmovie: searchParams.get("urlmovie") || "",
+          movieId: searchParams.get("movieId") || "",
+        }
+        
+        await setDoc(movieRef, newMovieData)
+        setMovie(newMovieData)
+        
+        if (newMovieData.movieId) {
+          setTmdbId(newMovieData.movieId)
+          console.log("Using provided movieId:", newMovieData.movieId)
+        } else if (newMovieData.name) {
+          console.log("Fetching tmdbId for new movie:", newMovieData.name)
+          await fetchTmdbId(newMovieData.name)
+        }
       }
+    } catch (error) {
+      console.error("Error fetching movie:", error)
+      setError("Failed to load movie data")
+    } finally {
+      setLoading(false)
     }
+  }
 
-    fetchMovie()
+  const fetchTmdbId = async (movieName: string) => {
+    try {
+      console.log("Searching TMDB for movie:", movieName)
+      const response = await fetch(
+        `https://api.themoviedb.org/3/search/movie?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}&query=${encodeURIComponent(movieName)}`
+      )
+      
+      if (!response.ok) {
+        throw new Error(`Failed to search TMDB: ${response.status} ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      console.log("TMDB search results:", data)
+
+      if (data.results && data.results.length > 0) {
+        const firstResult = data.results[0]
+        const tmdbId = firstResult.id.toString()
+        setTmdbId(tmdbId)
+        console.log("Found TMDB ID:", tmdbId)
+
+        // Mettre à jour le document dans Firestore avec les informations TMDB
+        if (params.id) {
+          const movieRef = doc(db, "movies", params.id)
+          const updatedMovie = {
+            movieId: tmdbId,
+            description: firstResult.overview,
+            year: firstResult.release_date?.split("-")[0],
+            genres: firstResult.genre_ids,
+            rating: firstResult.vote_average,
+            thumbnail: `https://image.tmdb.org/t/p/w500${firstResult.poster_path}`,
+          }
+          await updateDoc(movieRef, updatedMovie)
+          console.log("Updated movie with TMDB data")
+        }
+      } else {
+        console.log("No TMDB results found for:", movieName)
+      }
+    } catch (error) {
+      console.error("Error fetching TMDB ID:", error)
+    }
+  }
+
+  useEffect(() => {
+    if (params.id) {
+      fetchMovie()
+    }
   }, [params.id])
 
-  const changeServer = (server: ServerOption) => {
-    if (server.isPremium) {
-      toast({
-        title: "Accès Premium requis",
-        description: "Cette qualité est réservée aux membres premium. Mettez à niveau votre compte pour y accéder.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    // In a real app, you would change the video source here
-  }
+  // Log when similarMovies changes
+  useEffect(() => {
+    console.log("Similar movies state changed:", {
+      loading: similarLoading,
+      movies: similarMovies,
+      tmdbId
+    })
+  }, [similarMovies, similarLoading, tmdbId])
 
   const addToWatchlist = () => {
     toast({
@@ -253,7 +364,7 @@ export default function WatchPage() {
             {error || "Ce film n'est pas disponible actuellement. Veuillez réessayer plus tard."}
           </p>
           <Button asChild>
-            <Link href="/browse">Retour à l'accueil</Link>
+            <Link href="/movies">Retour à l'accueil</Link>
           </Button>
         </div>
       </div>
@@ -289,22 +400,22 @@ export default function WatchPage() {
 
         {/* Simple controls */}
         <div className="absolute top-4 right-4 flex gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white/80 hover:text-white"
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-white/80 hover:text-white"
             onClick={toggleTheaterMode}
-          >
-            <Maximize className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white/80 hover:text-white"
-            onClick={toggleFullscreen}
-          >
-            <Maximize className="h-5 w-5" />
-          </Button>
+                >
+                  <Maximize className="h-5 w-5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-white/80 hover:text-white"
+                  onClick={toggleFullscreen}
+                >
+                  <Maximize className="h-5 w-5" />
+                </Button>
         </div>
       </div>
 
@@ -367,41 +478,40 @@ export default function WatchPage() {
 
               {/* Tabs for comments and more */}
               <Tabs defaultValue="comments" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsList className="grid w-full grid-cols-1 mb-6">
                   <TabsTrigger value="comments">Commentaires</TabsTrigger>
-                  <TabsTrigger value="servers">Serveurs</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="comments" className="space-y-6">
                   {/* Comment form */}
                   {user ? (
-                    <div className="flex gap-3">
-                      <Avatar>
+                  <div className="flex gap-3">
+                    <Avatar>
                         <AvatarImage src={user.photoURL || "/placeholder.svg?height=40&width=40"} />
                         <AvatarFallback>{user.displayName?.[0] || "U"}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <textarea
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-                          placeholder="Ajouter un commentaire..."
-                          rows={2}
-                        ></textarea>
-                        <div className="flex justify-end mt-2">
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              const textarea = document.querySelector("textarea")
-                              if (textarea && textarea.value.trim()) {
+                    </Avatar>
+                    <div className="flex-1">
+                      <textarea
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                        placeholder="Ajouter un commentaire..."
+                        rows={2}
+                      ></textarea>
+                      <div className="flex justify-end mt-2">
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            const textarea = document.querySelector("textarea")
+                            if (textarea && textarea.value.trim()) {
                                 handleAddComment(textarea.value)
-                                textarea.value = ""
-                              }
-                            }}
-                          >
-                            Commenter
-                          </Button>
-                        </div>
+                              textarea.value = ""
+                            }
+                          }}
+                        >
+                          Commenter
+                        </Button>
                       </div>
                     </div>
+                  </div>
                   ) : (
                     <div className="bg-gray-800 rounded-lg p-4 text-center">
                       <p className="text-gray-400 mb-2">Connectez-vous pour commenter</p>
@@ -424,68 +534,40 @@ export default function WatchPage() {
                     ) : (
                       comments.map((comment) => (
                         <div key={comment.id} className="flex gap-3 bg-gray-800/50 p-4 rounded-lg">
-                          <Avatar>
+                        <Avatar>
                             <AvatarImage src={comment.userPhoto || "/placeholder.svg"} />
                             <AvatarFallback>{comment.username[0]}</AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
                               <span className="font-medium">{comment.username}</span>
                               <span className="text-xs text-gray-400">
                                 {formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true, locale: fr })}
                               </span>
-                            </div>
+                          </div>
                             <p className="text-gray-300 text-sm mb-2">{comment.content}</p>
-                            <div className="flex items-center gap-4 text-xs text-gray-400">
+                          <div className="flex items-center gap-4 text-xs text-gray-400">
                               <button 
                                 className="flex items-center gap-1 hover:text-gray-300"
                                 onClick={() => likeComment(comment.id)}
                                 title="J'aime"
                               >
-                                <ThumbsUp className="h-3.5 w-3.5" />
-                                <span>{comment.likes}</span>
-                              </button>
+                              <ThumbsUp className="h-3.5 w-3.5" />
+                              <span>{comment.likes}</span>
+                            </button>
                               <button 
                                 className="flex items-center gap-1 hover:text-gray-300"
                                 onClick={() => dislikeComment(comment.id)}
                                 title="Je n'aime pas"
                               >
-                                <ThumbsDown className="h-3.5 w-3.5" />
+                              <ThumbsDown className="h-3.5 w-3.5" />
                                 <span>{comment.dislikes}</span>
-                              </button>
+                            </button>
                             </div>
                           </div>
                         </div>
                       ))
                     )}
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="servers">
-                  <div className="grid gap-4">
-                    {serverOptions.map((server) => (
-                      <button
-                        key={server.id}
-                        className={cn(
-                          "flex items-center justify-between p-4 rounded-lg transition-colors text-left",
-                          server.id === 1 ? "bg-primary/20 border border-primary/30"
-                            : "bg-gray-800 hover:bg-gray-700 border border-transparent",
-                        )}
-                        onClick={() => changeServer(server)}
-                      >
-                        <div>
-                          <div className="font-medium flex items-center gap-2">
-                            {server.name}
-                          </div>
-                          <div className="text-sm text-gray-400 mt-1">{server.quality}</div>
-                        </div>
-                        {server.isPremium && (
-                          <Badge variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/50">
-                            Premium
-                          </Badge>
-                        )}
-                      </button>
-                    ))}
                   </div>
                 </TabsContent>
               </Tabs>
@@ -494,37 +576,11 @@ export default function WatchPage() {
             {/* Sidebar with related content */}
             <div className="lg:col-span-1">
               <h2 className="text-xl font-semibold mb-4">Films similaires</h2>
-              <div className="space-y-4">
-                {similarLoading ? (
-                  <div className="col-span-full flex justify-center">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  </div>
-                ) : (
-                  similarMovies.map((movie) => (
-                    <Link key={movie.id} href={`/watch/${movie.id}`} className="group block">
-                      <div className="relative aspect-[2/3] rounded-lg overflow-hidden mb-2">
-                        <Image
-                          src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
-                          alt={movie.title}
-                          fill
-                          className="object-cover transition-transform group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                          <Play className="h-10 w-10 text-white" />
-                        </div>
-                      </div>
-                      <div className="flex flex-col">
-                        <h3 className="font-medium group-hover:text-primary transition-colors truncate">
-                          {movie.title}
-                        </h3>
-                        <p className="text-xs text-gray-400">
-                          {new Date(movie.release_date).getFullYear()}
-                        </p>
-                      </div>
-                    </Link>
-                  ))
-                )}
-              </div>
+              <SimilarMoviesSection 
+                similarMovies={similarMovies} 
+                loading={similarLoading} 
+                error={similarError}
+              />
 
               {/* Watch history */}
               <div className="mt-8">

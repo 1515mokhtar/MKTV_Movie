@@ -39,8 +39,6 @@ export default function ProfilePage() {
       if (firebaseUser) {
         setUser(firebaseUser)
         await createUserIfNotExists(firebaseUser) // Create user in Firestore if they don't exist
-      } else {
-        router.push("/") // Redirect to home page if not authenticated
       }
       setLoading(false)
     })

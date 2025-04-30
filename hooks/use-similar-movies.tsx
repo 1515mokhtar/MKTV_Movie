@@ -14,27 +14,39 @@ export function useSimilarMovies(movieId: string) {
 
   useEffect(() => {
     const fetchSimilarMovies = async () => {
+      if (!movieId) {
+        setLoading(false)
+        return
+      }
+
       try {
+        console.log("Fetching similar movies for movieId:", movieId)
         const response = await fetch(
           `https://api.themoviedb.org/3/movie/${movieId}/similar?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`
         )
         
         if (!response.ok) {
-          throw new Error('Failed to fetch similar movies')
+          throw new Error(`Failed to fetch similar movies: ${response.status} ${response.statusText}`)
         }
 
         const data = await response.json()
-        setSimilarMovies(data.results)
+        console.log("Similar movies data:", data)
+        
+        if (data.results && Array.isArray(data.results)) {
+          setSimilarMovies(data.results)
+        } else {
+          setSimilarMovies([])
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred')
+        console.error("Error fetching similar movies:", err)
+        setError(err instanceof Error ? err.message : 'An error occurred while fetching similar movies')
+        setSimilarMovies([])
       } finally {
         setLoading(false)
       }
     }
 
-    if (movieId) {
-      fetchSimilarMovies()
-    }
+    fetchSimilarMovies()
   }, [movieId])
 
   return { similarMovies, loading, error }

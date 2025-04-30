@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Link from "next/link"
+import { AnimatePresence } from "framer-motion"
 
 interface SearchResult {
   id: number
@@ -179,10 +180,12 @@ function ResultsGrid({ results }: { results: SearchResult[] }) {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      {results.map((result) => (
-        <ResultCard key={`${result.media_type}-${result.id}`} result={result} />
-      ))}
+    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+      <AnimatePresence>
+        {results.map((result) => (
+          <ResultCard key={`${result.media_type}-${result.id}`} result={result} />
+        ))}
+      </AnimatePresence>
     </div>
   )
 }

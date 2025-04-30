@@ -13,6 +13,7 @@ import { toast } from "react-hot-toast"
 import { EnhancedMovieCard } from "@/components/EnhancedMovieCard"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
 import { LoginPrompt } from "@/components/LoginPrompt"
+import Link from "next/link"
 
 interface Movie {
   id: string
@@ -124,11 +125,15 @@ export default function WatchlistPage() {
   }
 
   if (loading) return <LoadingSpinner />
-  if (!user) return <LoginPrompt />
+  if (!user) return (
+    <div className="min-h-[calc(100vh-4rem)] flex items-center text-center justify-center">
+      <LoginPrompt />
+    </div>
+  )
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8" ref={pageRef}>
-      <h1 className="text-4xl font-bold text-primary">Your Watchlist</h1>
+      <h1 className="text-3xl sm:text-4xl font-bold text-primary">Your Watchlist</h1>
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="relative w-full md:w-64">
           <Input
@@ -140,9 +145,9 @@ export default function WatchlistPage() {
           />
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 w-full md:w-auto">
           <Select onValueChange={handleSelectAll}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full md:w-[180px]">
               <SelectValue placeholder="Select movies" />
             </SelectTrigger>
             <SelectContent>
@@ -151,14 +156,15 @@ export default function WatchlistPage() {
             </SelectContent>
           </Select>
           {selectedMovies.length > 0 && (
-            <Button onClick={handleDeleteSelected} variant="destructive">
+            <Button onClick={handleDeleteSelected} variant="destructive" className="w-full md:w-auto">
               Delete Selected ({selectedMovies.length})
             </Button>
           )}
         </div>
       </div>
+
       {filteredWatchlist.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
           <AnimatePresence>
             {filteredWatchlist.map((movie) => (
               <EnhancedMovieCard
@@ -169,7 +175,6 @@ export default function WatchlistPage() {
                 onSelect={(id, checked) => {
                   if (checked) {
                     setSelectedMovies((prev) => [...prev, id])
-                    
                   } else {
                     setSelectedMovies((prev) => prev.filter((movieId) => movieId !== id))
                   }
@@ -181,9 +186,16 @@ export default function WatchlistPage() {
           </AnimatePresence>
         </div>
       ) : (
-        <p className="text-center text-gray-500 dark:text-gray-400">
-          {searchTerm ? "No movies found matching your search." : "Your watchlist is empty."}
-        </p>
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <p className="text-lg sm:text-xl text-gray-500 dark:text-gray-400 mb-4">
+            {searchTerm ? "No movies found matching your search." : "Your watchlist is empty."}
+          </p>
+          {!searchTerm && (
+            <Button asChild>
+              <Link href="/movies/id">Browse Movies</Link>
+            </Button>
+          )}
+        </div>
       )}
     </div>
   )

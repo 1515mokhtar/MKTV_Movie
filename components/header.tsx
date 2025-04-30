@@ -51,7 +51,7 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
-  const user  = useAuth()
+  const { user, loading: authLoading } = useAuth()
 
   
   // For double-click detection
@@ -190,22 +190,9 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
   const handleLogout = async () => {
     try {
       await signOut(auth)
-
-      // Mettre à jour l'état de l'utilisateur dans Firestore
-      const userRef = doc(db, "users", auth.currentUser?.uid!)
-      await updateDoc(userRef, { eta: "disconnected" })
-
-      // Ajouter l'historique de la déconnexion
-      const historiqueRef = collection(userRef, "historique")
-      await addDoc(historiqueRef, {
-        date: serverTimestamp(),
-        etat: "deconnexion",
-      })
-
-      // Redirection vers la page de login après la déconnexion
-      router.push("/login")
-    } catch (err: any) {
-      setError(err.message)
+      router.push("/")
+    } catch (error) {
+      console.error("Error signing out:", error)
     }
   }
 
