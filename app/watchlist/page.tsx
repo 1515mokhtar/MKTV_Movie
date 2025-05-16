@@ -127,9 +127,23 @@ export default function WatchlistPage() {
 
   if (loading) return <LoadingSpinner />
   if (!user) return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 sm:p-8">
-      <div className="w-full max-w-md mx-auto">
-        <LoginPrompt />
+    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-2 py-8 bg-gradient-to-br from-primary/10 to-background/90">
+      <div className="w-full max-w-md flex flex-col items-center text-center space-y-6 rounded-xl shadow-lg bg-background/90 p-6 sm:p-10">
+        <h2 className="text-2xl sm:text-3xl font-bold text-primary">Welcome to Your Watchlist</h2>
+        <p className="text-base sm:text-lg text-gray-500 dark:text-gray-400">
+          Please log in or sign up to access your watchlist.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
+          <Button asChild className="w-full sm:w-auto">
+            <Link href="/login">Log In</Link>
+          </Button>
+          <Button asChild variant="outline" className="w-full sm:w-auto">
+            <Link href="/signup">Sign Up</Link>
+          </Button>
+        </div>
+        <Button asChild variant="ghost" className="w-full sm:w-auto">
+          <Link href="/">Return to Home</Link>
+        </Button>
       </div>
     </div>
   )
