@@ -14,6 +14,7 @@ import { EnhancedMovieCard } from "@/components/EnhancedMovieCard"
 import { LoadingSpinner } from "@/components/LoadingSpinner"
 import { LoginPrompt } from "@/components/LoginPrompt"
 import Link from "next/link"
+import { NavigationMenuItem, NavigationMenuContent, NavigationMenuLink, NavigationMenuTrigger } from "@/components/ui/navigation-menu"
 
 interface Movie {
   id: string
@@ -126,8 +127,10 @@ export default function WatchlistPage() {
 
   if (loading) return <LoadingSpinner />
   if (!user) return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center text-center justify-center">
-      <LoginPrompt />
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 sm:p-8">
+      <div className="w-full max-w-md mx-auto">
+        <LoginPrompt />
+      </div>
     </div>
   )
 

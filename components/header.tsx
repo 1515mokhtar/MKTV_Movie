@@ -9,6 +9,8 @@ import {
   NavigationMenuItem,
   NavigationMenuLink,
   NavigationMenuList,
+  NavigationMenuContent,
+  NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu"
 import {
@@ -59,6 +61,9 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
   const [lastKeyPressTime, setLastKeyPressTime] = useState(0)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const searchButtonRef = useRef<HTMLButtonElement>(null)
+
+  // Ajoute un état pour forcer l'affichage des résultats même si <5 lettres après un clic
+  const [forceShowResults, setForceShowResults] = useState(false)
 
   const performSearch = async (query: string, searchType = "both") => {
     if (!query.trim()) return
@@ -140,12 +145,12 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
     setLastClickTime(now)
 
     if (isDoubleClick) {
-      // Navigate to full search results page
       router.push(`/search-results?query=${encodeURIComponent(searchQuery)}`)
       setIsSearchFocused(false)
     } else if (searchQuery.trim()) {
-      // Regular search
       performSearch(searchQuery)
+      setForceShowResults(true)
+      setIsSearchFocused(true)
     }
   }
 
@@ -196,18 +201,19 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
     }
   }
 
-  // Effect to perform search when query changes
+  // Déclenche la recherche seulement si la longueur >= 5 et après 700ms de pause
   useEffect(() => {
-    if (searchQuery.trim()) {
+    if (searchQuery.trim().length >= 5) {
       const debounceTimer = setTimeout(() => {
         performSearch(searchQuery)
-      }, 800) // Augmenté de 300ms à 800ms pour donner plus de temps à l'utilisateur
-
+        setForceShowResults(false)
+      }, 700)
       return () => clearTimeout(debounceTimer)
-    } else {
+    } else if (!forceShowResults) {
       setSearchResults([])
     }
-  }, [searchQuery])
+    // Si forceShowResults est actif, on ne vide pas les résultats
+  }, [searchQuery, forceShowResults])
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -216,19 +222,20 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
           MKTV
         </Link>
 
-        <div ref={wrapperRef} className="relative flex-1 md:max-w-96">
+        <div ref={wrapperRef} className="relative flex-1 w-full max-w-full px-2 sm:px-0">
           <form onSubmit={handleSearchSubmit} className="flex gap-2">
             <Input
               ref={searchInputRef}
               type="search"
               placeholder="Search movies & series..."
-              className="w-full"
+              className="w-full rounded-lg px-4 py-3 text-base text-lg md:text-base h-12 md:h-10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setIsSearchFocused(true)}
               onBlur={handleInputBlur}
               onKeyDown={handleKeyDown}
               disabled={isLoading}
+              style={{ minHeight: 48 }}
             />
             <Button
               ref={searchButtonRef}
@@ -236,31 +243,31 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
               size="icon"
               variant="ghost"
               disabled={isLoading}
+              className="rounded-lg h-12 w-12 md:h-10 md:w-10"
               onClick={handleSearchButtonClick}
             >
-              <Search className="h-4 w-4" />
+              <Search className="h-6 w-6" />
             </Button>
           </form>
 
-          {isSearchFocused && (
-            <div className="absolute top-full left-0 w-full bg-background rounded-md shadow-md z-50">
+          {/* Résultats de recherche overlay, responsive, max-w-80vw et centrés */}
+          {(isSearchFocused && (searchQuery.trim().length >= 5 || forceShowResults)) && (
+            <div className="absolute left-1/2 -translate-x-1/2 w-[98vw] max-w-[80vw] bg-background rounded-md shadow-md z-50 max-h-96 overflow-y-auto mt-1 p-2">
               {isLoading ? (
-                <div className="p-4 text-center">Loading...</div>
+                <div className="p-4 text-center text-base">Loading...</div>
               ) : error ? (
-                <div className="p-4 text-center text-red-500">{error}</div>
+                <div className="p-4 text-center text-red-500 text-base">{error}</div>
               ) : searchResults.length === 0 ? (
-                searchQuery.trim() ? (
-                  <div className="p-4 text-center">No results found.</div>
-                ) : null
+                <div className="p-4 text-center text-base">No results found.</div>
               ) : (
-                <ul className="max-h-60 overflow-y-auto">
+                <ul className="max-h-80 overflow-y-auto space-y-2">
                   {searchResults.map((result) => (
                     <li
                       key={result.id}
                       onClick={() => handleResultClick(result)}
-                      className="cursor-pointer p-2 hover:bg-muted/50 flex items-center gap-3"
+                      className="cursor-pointer p-2 hover:bg-muted/50 flex items-center gap-3 rounded-lg"
                     >
-                      <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded">
+                      <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg">
                         {result.poster_path ? (
                           <img
                             src={`https://image.tmdb.org/t/p/w92${result.poster_path}`}
@@ -270,25 +277,25 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
                         ) : (
                           <div className="h-full w-full bg-muted flex items-center justify-center">
                             {result.media_type === "movie" ? (
-                              <Film className="h-5 w-5 text-muted-foreground" />
+                              <Film className="h-6 w-6 text-muted-foreground" />
                             ) : (
-                              <Tv className="h-5 w-5 text-muted-foreground" />
+                              <Tv className="h-6 w-6 text-muted-foreground" />
                             )}
                           </div>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="truncate font-medium">{result.title || result.name}</p>
+                        <p className="truncate font-medium text-base">{result.title || result.name}</p>
                       </div>
                       <div className="flex-shrink-0 px-2 py-1 rounded-full bg-muted text-xs font-medium">
                         {result.media_type === "movie" ? (
                           <span className="flex items-center gap-1">
-                            <Film className="h-3 w-3" />
+                            <Film className="h-4 w-4" />
                             Film
                           </span>
                         ) : (
                           <span className="flex items-center gap-1">
-                            <Tv className="h-3 w-3" />
+                            <Tv className="h-4 w-4" />
                             Série
                           </span>
                         )}
@@ -315,9 +322,21 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
         <NavigationMenu className="hidden md:flex ml-auto">
           <NavigationMenuList>
             <NavigationMenuItem>
-              <Link href="/movies" legacyBehavior passHref>
-                <NavigationMenuLink className={navigationMenuTriggerStyle()}>Movies</NavigationMenuLink>
-              </Link>
+              <NavigationMenuTrigger>Movies</NavigationMenuTrigger>
+              <NavigationMenuContent>
+                <div className="flex flex-col gap-1 px-2 py-1">
+                  <NavigationMenuLink asChild>
+                    <Link href="/movies" className="block px-4 py-2 hover:bg-muted rounded transition-colors whitespace-nowrap">
+                      All movies
+                    </Link>
+                  </NavigationMenuLink>
+                  <NavigationMenuLink asChild>
+                    <Link href="/movies/disponible" className="block px-4 py-2 hover:bg-muted rounded transition-colors whitespace-nowrap">
+                      Movies disponible
+                    </Link>
+                  </NavigationMenuLink>
+                </div>
+              </NavigationMenuContent>
             </NavigationMenuItem>
             <NavigationMenuItem>
               <Link href="/series" legacyBehavior passHref>
@@ -341,8 +360,11 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
           </SheetTrigger>
           <SheetContent side="right" className="w-[300px] sm:w-[400px]">
             <nav className="flex flex-col gap-4">
-              <Link href="/movies" className="text-lg font-semibold">
-                Movies
+              <Link href="/movies" className="text-lg font-semibold whitespace-nowrap">
+                All movies
+              </Link>
+              <Link href="/movies/disponible" className="text-lg font-semibold whitespace-nowrap">
+                Movies disponible
               </Link>
               <Link href="/series" className="text-lg font-semibold">
                 Series

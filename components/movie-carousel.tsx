@@ -63,7 +63,7 @@ export function MovieCarousel() {
     const getMovies = async () => {
       setLoading(true)
       try {
-        const url = "https://api.themoviedb.org/3/movie/popular?language=en-US&page=1"
+        const url = "https://api.themoviedb.org/3/trending/movie/day?language=en-US&page=1"
         const options = {
           method: "GET",
           headers: {
@@ -76,7 +76,7 @@ export function MovieCarousel() {
         const data = await response.json()
 
         // Transform the API data to match the Movie type structure
-        const transformedMovies = data.results.map((movie: any, index: number) => ({
+        const transformedMovies = data.results.slice(0, 10).map((movie: any, index: number) => ({
           id: movie.id.toString(),
           title: movie.title,
           type: "movie", // Default to "movie" since this is a movie API
@@ -89,38 +89,8 @@ export function MovieCarousel() {
             .map((id: number) => genres[id] || "Unknown") // Map genre_ids to genre names
             .join(", "), // Join multiple genres into a single string
         }))
-// Filter by genre
-        const filteredMovies =
-  selectedGenre === "all"
-    ? transformedMovies
-    : transformedMovies.filter((movie: { genre: string }) =>
-        movie.genre.toLowerCase().includes(selectedGenre.toLowerCase())
-      ); // <-- Added the missing closing parenthesis here
 
-// Filter by year
-const filteredByYear =
-  selectedYear === "all"
-    ? filteredMovies
-    : filteredMovies.filter((movie: { releaseDate: string }) => {
-        return new Date(movie.releaseDate).getFullYear().toString() === selectedYear;
-      });
-        // Sort movies
-        const sortedMovies = filteredByYear.sort((a: Movie, b: Movie) => {
-          switch (selectedSort) {
-            case "date":
-              return new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime()
-            case "rating":
-              return b.views - a.views // Replace with actual rating logic if available
-            case "views":
-              return b.views - a.views
-            case "name":
-              return a.title.localeCompare(b.title)
-            default:
-              return 0
-          }
-        })
-
-        setMovies(sortedMovies)
+        setMovies(transformedMovies)
       } catch (error) {
         console.error("Error fetching movies:", error)
       } finally {
@@ -131,34 +101,43 @@ const filteredByYear =
     if (Object.keys(genres).length > 0) {
       getMovies()
     }
-  }, [genres, selectedGenre, selectedYear, selectedSort])
+  }, [genres])
+
+  if (loading) {
+    return (
+      <div className="w-full h-64 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
 
   return (
-    <Carousel
-      opts={{
-        align: "start",
-        loop: true,
-      }}
-      className="w-full"
-    >
-      <CarouselContent className="-ml-2 md:-ml-4">
-        {movies.map((movie) => (
-          <CarouselItem key={movie.id} className="pl-2 md:pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5">
-            <div className="transform transition-all duration-300 hover:scale-105">
-              <MovieCard
-                title={movie.title}
-                genre={movie.genre}
-                releaseDate={new Date(movie.releaseDate).getFullYear().toString()}
-                poster={movie.poster}
-                id={movie.id}
-              />
-            </div>
-          </CarouselItem>
-        ))}
-      </CarouselContent>
-      <CarouselPrevious className="hidden sm:flex" />
-      <CarouselNext className="hidden sm:hidden md:hidden lg:flex" />
-
-    </Carousel>
+    <div className="relative px-8">
+      <Carousel
+        opts={{
+          align: "start",
+          loop: true,
+        }}
+        className="w-full"
+      >
+        <CarouselContent className="-ml-2 md:-ml-4">
+          {movies.map((movie) => (
+            <CarouselItem key={movie.id} className="pl-2 md:pl-4 basis-1/3 sm:basis-1/4 md:basis-1/5 lg:basis-1/6">
+              <div className="transform transition-all duration-300 hover:scale-105">
+                <MovieCard
+                  title={movie.title}
+                  genre={movie.genre}
+                  releaseDate={new Date(movie.releaseDate).getFullYear().toString()}
+                  poster={movie.poster}
+                  id={movie.id}
+                />
+              </div>
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+        <CarouselPrevious className="absolute -left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70" />
+        <CarouselNext className="absolute -right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70" />
+      </Carousel>
+    </div>
   )
 }
