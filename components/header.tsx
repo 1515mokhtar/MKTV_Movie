@@ -252,7 +252,7 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
 
           {/* Résultats de recherche overlay, responsive, max-w-80vw et centrés */}
           {(isSearchFocused && (searchQuery.trim().length >= 5 || forceShowResults)) && (
-            <div className="absolute left-1/2 -translate-x-1/2 w-[98vw] max-w-[80vw] bg-background rounded-md shadow-md z-50 max-h-96 overflow-y-auto mt-1 p-2">
+            <div className="absolute left-1/2 -translate-x-1/2 w-[98vw] max-w-[80vw] sm:max-w-[60vw] md:max-w-[60vw] bg-background rounded-md shadow-md z-50 max-h-96 overflow-y-auto mt-1 p-2">
               {isLoading ? (
                 <div className="p-4 text-center text-base">Loading...</div>
               ) : error ? (
