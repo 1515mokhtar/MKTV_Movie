@@ -173,7 +173,7 @@ function MovieInfo({ movie }: { movie: any }) {
                   Watch Trailer
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[800px]">
+              <DialogContent className="sm:max-w-[800px] bg-cover bg-center" style={{ backgroundImage: `url(https://image.tmdb.org/t/p/original${movie.backdrop_path})` }}>
                 <VisuallyHidden>
                   <DialogTitle>Trailer</DialogTitle>
                 </VisuallyHidden>

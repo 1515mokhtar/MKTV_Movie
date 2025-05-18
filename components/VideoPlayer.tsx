@@ -18,7 +18,6 @@ export default function VideoPlayer({ url }: VideoPlayerProps) {
         height="100%"
         playing={isPlaying}
         controls={true}
-        light="/placeholder.svg"
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
       />
