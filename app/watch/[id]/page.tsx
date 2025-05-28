@@ -194,17 +194,19 @@ function SimilarMoviesSection({ similarMovies, loading, error }: { similarMovies
       <CarouselContent className="-ml-4">
         {similarMovies.map((movie) => (
           <CarouselItem key={movie.id} className="pl-4 basis-1/3 md:basis-1/4 lg:basis-1/4 xl:basis-1/5">
-            <EnhancedMovieCard
-              movie={{
-                id: movie.id.toString(),
-                title: movie.title,
-                posterPath: movie.poster_path,
-                releaseDate: movie.release_date,
-                rating: movie.vote_average
-              }}
-              isWatchlist={false}
-              showYear={false}
-            />
+            <Link href={`/movies/${movie.id}`}>
+              <EnhancedMovieCard
+                movie={{
+                  id: movie.id.toString(),
+                  title: movie.title,
+                  posterPath: movie.poster_path,
+                  releaseDate: movie.release_date,
+                  rating: movie.vote_average
+                }}
+                isWatchlist={false}
+                showYear={false}
+              />
+            </Link>
           </CarouselItem>
         ))}
       </CarouselContent>

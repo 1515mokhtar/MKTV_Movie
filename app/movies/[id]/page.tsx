@@ -287,15 +287,15 @@ function SimilarMoviesSection({ similarMovies }: { similarMovies: any[] }) {
 }
 
 function MoviePage({ movie }: { movie: any }) {
+  const router = useRouter()
+
   return (
     <div className="container mx-auto px-4 py-8 space-y-12">
-      <Link
-        href="/movies"
-        className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ChevronLeft className="w-4 h-4 mr-2" />
-        Back to Movies
-      </Link>
+      <div className="mb-8">
+        <Button variant="ghost" size="icon" onClick={() => router.back()} className="hover:bg-gray-800">
+          <ChevronLeft className="h-6 w-6" />
+        </Button>
+      </div>
       <MovieInfo movie={movie} />
       <CastSection cast={movie.credits.cast} />
       <SimilarMoviesSection similarMovies={movie.similar.results} />
