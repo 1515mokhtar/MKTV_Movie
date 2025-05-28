@@ -1,0 +1,55 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Rule for users collection
+    match /users/{userId} {
+      // Main user document - only admin can write
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+                   request.resource.data.role is string &&
+                   request.resource.data.role.trim() == "admin";
+      
+      // Allow access to watchHistory subcollection
+      match /watchHistory/{videoId} {
+        allow read, write: if request.auth != null && 
+                          request.auth.uid == userId;
+      }
+    }
+
+    // Rule for movies collection
+    match /movies/{movieId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Rule for watchlist collection
+    match /watchlist/{entryId} {
+      // Permettre la lecture si l'utilisateur est connecté
+      allow read: if request.auth != null;
+      
+      // Permettre la création si l'utilisateur est connecté
+      allow create: if request.auth != null && 
+                   request.resource.data.userId == request.auth.uid;
+      
+      // Permettre la mise à jour si l'utilisateur est connecté et que l'entrée lui appartient
+      allow update: if request.auth != null && 
+                   resource.data.userId == request.auth.uid &&
+                   request.resource.data.userId == request.auth.uid;
+      
+      // Permettre la suppression si l'utilisateur est connecté et que l'entrée lui appartient
+      allow delete: if request.auth != null && 
+                   resource.data.userId == request.auth.uid;
+    }
+
+    // Rule for comments
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+
+    // Default deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+} 

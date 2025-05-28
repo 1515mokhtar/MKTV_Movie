@@ -22,7 +22,13 @@ export function useSimilarMovies(movieId: string) {
       try {
         console.log("Fetching similar movies for movieId:", movieId)
         const response = await fetch(
-          `https://api.themoviedb.org/3/movie/${movieId}/similar?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`
+          `https://api.themoviedb.org/3/movie/${movieId}/similar`,
+          {
+            headers: {
+              accept: "application/json",
+              Authorization: `Bearer ${process.env.NEXT_PUBLIC_TMDB_API_KEY}`
+            }
+          }
         )
         
         if (!response.ok) {

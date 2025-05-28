@@ -1,219 +1,375 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
-import { useAuthState } from "react-firebase-hooks/auth"
-import { collection, query, where, getDocs, doc, deleteDoc, updateDoc } from "firebase/firestore"
-import { auth, db } from "@/lib/firebase"
+import { useEffect, useState } from "react"
+import { collection, query, where, getDocs, deleteDoc, doc } from "firebase/firestore"
+import { db } from "@/lib/firebase"
+import { useAuth } from "@/hooks/use-auth"
+import { useToast } from "@/hooks/use-toast"
+import { Loader2, X, Image as ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search } from "lucide-react"
-import { AnimatePresence } from "framer-motion"
-import { toast } from "react-hot-toast"
-import { EnhancedMovieCard } from "@/components/EnhancedMovieCard"
-import { LoadingSpinner } from "@/components/LoadingSpinner"
-import { LoginPrompt } from "@/components/LoginPrompt"
+import { Card, CardContent } from "@/components/ui/card"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import Image from "next/image"
 import Link from "next/link"
-import { NavigationMenuItem, NavigationMenuContent, NavigationMenuLink, NavigationMenuTrigger } from "@/components/ui/navigation-menu"
+import { formatDistanceToNow, isValid } from "date-fns"
+import { fr } from "date-fns/locale"
 
-interface Movie {
+const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500"
+
+interface WatchlistItem {
   id: string
+  userId: string
   movieId: string
   title: string
   posterPath: string
-  addedAt: any
-  comment?: string
-  releaseDate?: string
+  addedAt: string
+  releaseDate: string
+  rating: number
+  genres: string[]
+  description: string
+  duration: string
+  urlmovie: string
+}
+
+// Fonction utilitaire pour formater la date
+const formatDate = (dateString: string) => {
+  try {
+    const date = new Date(dateString)
+    if (!isValid(date)) {
+      return "Date inconnue"
+    }
+    return formatDistanceToNow(date, { addSuffix: true, locale: fr })
+  } catch (error) {
+    console.error("Error formatting date:", error)
+    return "Date inconnue"
+  }
+}
+
+// Fonction utilitaire pour valider et convertir la date
+const validateAndConvertDate = (dateString: any): string => {
+  try {
+    if (!dateString) {
+      return new Date().toISOString()
+    }
+
+    if (dateString instanceof Date && isValid(dateString)) {
+      return dateString.toISOString()
+    }
+
+    if (typeof dateString === 'string') {
+      const date = new Date(dateString)
+      if (isValid(date)) {
+        return date.toISOString()
+      }
+    }
+
+    if (dateString && typeof dateString.toDate === 'function') {
+      const date = dateString.toDate()
+      if (isValid(date)) {
+        return date.toISOString()
+      }
+    }
+
+    return new Date().toISOString()
+  } catch (error) {
+    console.error("Error converting date:", error)
+    return new Date().toISOString()
+  }
+}
+
+// Fonction utilitaire pour obtenir l'URL de l'image TMDB
+const getTMDBImageUrl = (posterPath: string): string => {
+  if (!posterPath) return "/placeholder.svg"
+  if (posterPath.startsWith("http")) return posterPath
+  return `${TMDB_IMAGE_BASE_URL}${posterPath}`
 }
 
 export default function WatchlistPage() {
-  const [user, loading] = useAuthState(auth)
-  const [watchlist, setWatchlist] = useState<Movie[]>([])
-  const [filteredWatchlist, setFilteredWatchlist] = useState<Movie[]>([])
-  const [selectedMovies, setSelectedMovies] = useState<string[]>([])
-  const [showCheckboxes, setShowCheckboxes] = useState(false)
-  const [searchTerm, setSearchTerm] = useState("")
-  const pageRef = useRef<HTMLDivElement>(null)
+  const { user } = useAuth()
+  const { toast } = useToast()
+  const [watchlist, setWatchlist] = useState<WatchlistItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({})
+  const [imagesLoaded, setImagesLoaded] = useState<Record<string, boolean>>({})
+  const [movieToDelete, setMovieToDelete] = useState<WatchlistItem | null>(null)
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null)
 
-  useEffect(() => {
-    const fetchWatchlist = async () => {
-      if (!user) return
-
-      try {
-        const watchlistQuery = query(collection(db, "watchlist"), where("userId", "==", user.uid))
-        const querySnapshot = await getDocs(watchlistQuery)
-        const movies = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as Movie[]
-
-        setWatchlist(movies)
-        setFilteredWatchlist(movies)
-      } catch (error) {
-        console.error("Error fetching watchlist:", error)
-        toast.error("Failed to load watchlist")
-      }
+  // Charger la watchlist
+  const loadWatchlist = async () => {
+    if (!user) {
+      setLoading(false)
+      return
     }
 
-    fetchWatchlist()
+    try {
+      console.log("Loading watchlist for user:", user.uid)
+      const watchlistRef = collection(db, "watchlist")
+      const q = query(watchlistRef, where("userId", "==", user.uid))
+      const querySnapshot = await getDocs(q)
+
+      const watchlistData: WatchlistItem[] = []
+      querySnapshot.forEach((doc) => {
+        const data = doc.data()
+        console.log("Raw watchlist data:", data)
+
+        watchlistData.push({
+          id: doc.id,
+          userId: data.userId || user.uid,
+          movieId: data.movieId || "",
+          title: data.title || "Film sans titre",
+          posterPath: data.posterPath || "",
+          addedAt: validateAndConvertDate(data.addedAt),
+          releaseDate: data.releaseDate || "",
+          rating: data.rating || 0,
+          genres: Array.isArray(data.genres) ? data.genres : [],
+          description: data.description || "",
+          duration: data.duration || "",
+          urlmovie: data.urlmovie || ""
+        })
+      })
+
+      console.log("Processed watchlist data:", watchlistData)
+      setWatchlist(watchlistData)
+    } catch (error) {
+      console.error("Error loading watchlist:", error)
+      setError("Erreur lors du chargement de votre watchlist")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Gérer les erreurs de chargement d'image
+  const handleImageError = (movieId: string) => {
+    setImageErrors(prev => ({
+      ...prev,
+      [movieId]: true
+    }))
+  }
+
+  // Gérer le chargement réussi d'une image
+  const handleImageLoad = (movieId: string) => {
+    setImagesLoaded(prev => ({
+      ...prev,
+      [movieId]: true
+    }))
+  }
+
+  // Supprimer un film de la watchlist
+  const removeFromWatchlist = async (movieId: string) => {
+    if (!user || deletingItemId === movieId) return // Empêcher les suppressions multiples
+
+    try {
+      setDeletingItemId(movieId) // Déclencher l'état de suppression
+
+      // Ajouter un délai pour permettre l'animation
+      await new Promise(resolve => setTimeout(resolve, 300)) // Délai de 300ms pour l'animation
+
+      const watchlistRef = doc(db, "watchlist", `${user.uid}_${movieId}`)
+      await deleteDoc(watchlistRef)
+      
+      // Mettre à jour l'état local après la suppression
+      setWatchlist(watchlist.filter(item => item.movieId !== movieId))
+      
+      toast({
+        title: "Film retiré",
+        description: "Le film a été retiré de votre watchlist",
+      })
+    } catch (error) {
+      console.error("Error removing from watchlist:", error)
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la suppression du film",
+        variant: "destructive"
+      })
+    }
+  }
+
+  useEffect(() => {
+    loadWatchlist()
   }, [user])
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (pageRef.current && !pageRef.current.contains(event.target as Node)) {
-        setShowCheckboxes(false)
-        setSelectedMovies([])
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [])
-
-  useEffect(() => {
-    const filtered = watchlist.filter((movie) => movie.title.toLowerCase().includes(searchTerm.toLowerCase()))
-    setFilteredWatchlist(filtered)
-  }, [searchTerm, watchlist])
-
-  const handleDelete = async (movieId: string) => {
-    try {
-      await deleteDoc(doc(db, "watchlist", movieId))
-      setWatchlist((prev) => prev.filter((movie) => movie.id !== movieId))
-      toast.success("Movie removed from watchlist")
-    } catch (error) {
-      console.error("Error deleting movie:", error)
-      toast.error("Failed to delete movie")
-    }
-  }
-
-  const handleDeleteSelected = async () => {
-    try {
-      const batch = selectedMovies.map((id) => deleteDoc(doc(db, "watchlist", id)))
-      await Promise.all(batch)
-      setWatchlist((prev) => prev.filter((movie) => !selectedMovies.includes(movie.id)))
-      setSelectedMovies([])
-      toast.success("Selected movies removed from watchlist")
-    } catch (error) {
-      console.error("Error deleting selected movies:", error)
-      toast.error("Failed to delete selected movies")
-    }
-  }
-
-  const handleEdit = async (movieId: string, newComment: string) => {
-    try {
-      const movieRef = doc(db, "watchlist", movieId)
-      await updateDoc(movieRef, {
-        comment: newComment,
-      })
-      setWatchlist((prev) => prev.map((movie) => (movie.id === movieId ? { ...movie, comment: newComment } : movie)))
-      toast.success("Comment updated successfully")
-    } catch (error) {
-      console.error("Error updating movie:", error)
-      toast.error("Failed to update comment")
-    }
-  }
-
-  const handleSelectAll = (value: string) => {
-    setShowCheckboxes(true)
-    if (value === "all") {
-      setSelectedMovies(filteredWatchlist.map((movie) => movie.id))
-      
-    } else {
-      setSelectedMovies([])
-    }
-  }
-
-  if (loading) return <LoadingSpinner />
-  if (!user) return (
-    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-2 py-8 bg-gradient-to-br from-primary/10 to-background/90">
-      <div className="w-full max-w-md flex flex-col items-center text-center space-y-6 rounded-xl shadow-lg bg-background/90 p-6 sm:p-10">
-        <h2 className="text-2xl sm:text-3xl font-bold text-primary">Welcome to Your Watchlist</h2>
-        <p className="text-base sm:text-lg text-gray-500 dark:text-gray-400">
-          Please log in or sign up to access your watchlist.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
-          <Button asChild className="w-full sm:w-auto">
-            <Link href="/login">Log In</Link>
-          </Button>
-          <Button asChild variant="outline" className="w-full sm:w-auto">
-            <Link href="/signup">Sign Up</Link>
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Connectez-vous</h1>
+          <p className="text-gray-400 mb-6">
+            Vous devez être connecté pour voir votre watchlist
+          </p>
+          <Button asChild>
+            <Link href="/login">Se connecter</Link>
           </Button>
         </div>
-        <Button asChild variant="ghost" className="w-full sm:w-auto">
-          <Link href="/">Return to Home</Link>
-        </Button>
       </div>
-    </div>
-  )
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-center items-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <X className="h-12 w-12 mx-auto text-red-500 mb-4" />
+          <h1 className="text-2xl font-bold mb-4">Erreur</h1>
+          <p className="text-gray-400 mb-6">{error}</p>
+          <Button onClick={loadWatchlist}>Réessayer</Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (watchlist.length === 0) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Votre watchlist est vide</h1>
+          <p className="text-gray-400 mb-6">
+            Ajoutez des films à votre watchlist pour les retrouver ici
+          </p>
+          <Button asChild>
+            <Link href="/movies">Découvrir des films</Link>
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8" ref={pageRef}>
-      <h1 className="text-3xl sm:text-4xl font-bold text-primary">Your Watchlist</h1>
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-        <div className="relative w-full md:w-64">
-          <Input
-            type="text"
-            placeholder="Search movies..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-        </div>
-        <div className="flex items-center gap-2 sm:gap-4 w-full md:w-auto">
-          <Select onValueChange={handleSelectAll}>
-            <SelectTrigger className="w-full md:w-[180px]">
-              <SelectValue placeholder="Select movies" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Select All</SelectItem>
-              <SelectItem value="none">Deselect All</SelectItem>
-            </SelectContent>
-          </Select>
-          {selectedMovies.length > 0 && (
-            <Button onClick={handleDeleteSelected} variant="destructive" className="w-full md:w-auto">
-              Delete Selected ({selectedMovies.length})
-            </Button>
-          )}
-        </div>
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-2xl font-bold mb-6">Ma Watchlist</h1>
+      
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
+        {watchlist.map((item) => (
+          <Card 
+            key={item.id} 
+            className={`bg-gray-900 border-gray-800 transition-all duration-300 ease-in-out ${
+              deletingItemId === item.movieId ? 'opacity-0 transform scale-95' : ''
+            }`}
+          >
+            <CardContent className="p-4">
+              <div className="relative aspect-[2/3] mb-4 bg-gray-800 rounded-lg overflow-hidden">
+                {!imagesLoaded[item.movieId] && !imageErrors[item.movieId] && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                )}
+                
+                {imageErrors[item.movieId] ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+                    <ImageIcon className="h-12 w-12 text-gray-600" />
+                  </div>
+                ) : (
+                  <Image
+                    src={getTMDBImageUrl(item.posterPath)}
+                    alt={item.title}
+                    fill
+                    className={`object-cover transition-opacity duration-300 ${
+                      imagesLoaded[item.movieId] ? 'opacity-100' : 'opacity-0'
+                    }`}
+                    onError={() => handleImageError(item.movieId)}
+                    onLoad={() => handleImageLoad(item.movieId)}
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    priority={false}
+                    loading="lazy"
+                  />
+                )}
+              </div>
+              
+              <h2 className="font-semibold mb-2 line-clamp-1">{item.title}</h2>
+              
+              <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
+                {item.releaseDate && <span>{item.releaseDate}</span>}
+                {item.duration && (
+                  <>
+                    <span>•</span>
+                    <span>{item.duration}</span>
+                  </>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                  onClick={() => setMovieToDelete(item)}
+                  disabled={deletingItemId === item.movieId}
+                >
+                  Retirer
+                </Button>
+                
+                <Button asChild variant="ghost" size="sm" className="text-blue-500 hover:text-blue-600 hover:bg-blue-500/10">
+                  <Link href={`/movies/${item.movieId}`}>
+                    <span className="flex items-center gap-2">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="lucide lucide-info"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 16v-4" />
+                        <path d="M12 8h.01" />
+                      </svg>
+                      Détails
+                    </span>
+                  </Link>
+                </Button>
+              </div>
+
+              <div className="text-xs text-gray-500 mt-2">
+                Ajouté {formatDate(item.addedAt)}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {filteredWatchlist.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-          <AnimatePresence>
-            {filteredWatchlist.map((movie) => (
-              <EnhancedMovieCard
-                key={movie.id}
-                movie={movie}
-                isWatchlist={true}
-                showCheckboxes={showCheckboxes}
-                onSelect={(id, checked) => {
-                  if (checked) {
-                    setSelectedMovies((prev) => [...prev, id])
-                  } else {
-                    setSelectedMovies((prev) => prev.filter((movieId) => movieId !== id))
-                  }
-                }}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
-            ))}
-          </AnimatePresence>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <p className="text-lg sm:text-xl text-gray-500 dark:text-gray-400 mb-4">
-            {searchTerm ? "No movies found matching your search." : "Your watchlist is empty."}
-          </p>
-          {!searchTerm && (
-            <Button asChild>
-              <Link href="/movies/id">Browse Movies</Link>
-            </Button>
-          )}
-        </div>
-      )}
+      <AlertDialog open={!!movieToDelete} onOpenChange={() => setMovieToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir retirer "{movieToDelete?.title}" de votre watchlist ?
+              Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => movieToDelete && removeFromWatchlist(movieToDelete.movieId)}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

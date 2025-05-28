@@ -26,6 +26,7 @@ interface EnhancedMovieCardProps {
   onSelect?: (id: string, checked: boolean) => void
   onEdit?: (id: string, newComment: string) => void
   onDelete?: (id: string) => void
+  showYear?: boolean
 }
 
 export function EnhancedMovieCard({
@@ -35,6 +36,7 @@ export function EnhancedMovieCard({
   onSelect,
   onEdit,
   onDelete,
+  showYear,
 }: EnhancedMovieCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editComment, setEditComment] = useState(movie.comment || "")
@@ -73,8 +75,8 @@ export function EnhancedMovieCard({
         <CardContent className="p-3 sm:p-4">
           <div className="flex justify-between items-start">
             <div>
-              <h3 className="font-semibold truncate text-sm sm:text-base">{movie.title}</h3>
-              {movie.releaseDate && (
+              <h3 className="font-semibold truncate text-xs sm:text-base">{movie.title}</h3>
+              {movie.releaseDate && showYear !== false && (
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   {new Date(movie.releaseDate).getFullYear()}
                 </p>
