@@ -9,25 +9,49 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Star, Calendar, Clock, TrendingUp, ChevronLeft } from "lucide-react"
 
 async function getSeriesDetails(id: string) {
-  const url = `https://api.themoviedb.org/3/tv/${id}?append_to_response=credits,similar&language=en-US`
+  // Use the API key as a query parameter for v3 endpoints
+  const apiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY_V3;
+  
+  // *** ADDED LOGGING ***
+  console.log("Fetching series details for ID:", id);
+  console.log("Using API Key (first 5 chars):", apiKey ? apiKey.substring(0, 5) + "..." : "NOT CONFIGURED");
+  // *** END ADDED LOGGING ***
+
+  if (!apiKey) {
+    console.error("TMDB API key (NEXT_PUBLIC_TMDB_API_V3) is not configured.");
+    // Optionally handle this error more gracefully, e.g., redirect or show message
+    notFound(); // Treat as not found if key is missing
+  }
+
+  const url = `https://api.themoviedb.org/3/tv/${id}?api_key=${apiKey}&append_to_response=credits,similar,videos`;
 
   const res = await fetch(url, {
     method: "GET",
     headers: {
       accept: "application/json",
-      Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
+      // Remove Bearer token header
     },
     next: { revalidate: 60 * 60 * 24 }, // Revalidate every 24 hours
-  })
+  });
 
+  // *** ADDED LOGGING ***
+  console.log("TMDB API Response Status:", res.status);
   if (!res.ok) {
+    const errorData = await res.text().catch(() => "Could not parse error body"); // Use .text() for potentially non-JSON errors
+    console.error("Error fetching series details:", {
+      status: res.status,
+      statusText: res.statusText,
+      errorData: errorData,
+      requestUrl: url, // Log the URL being requested
+    });
     if (res.status === 404) {
-      notFound()
+      notFound();
     }
-    throw new Error("Failed to fetch series details")
+    throw new Error(`Failed to fetch series details: ${res.status} ${res.statusText}`);
   }
+  // *** END ADDED LOGGING ***
 
-  return res.json()
+  return res.json();
 }
 
 function SeriesInfo({ series }: { series: any }) {
@@ -114,31 +138,61 @@ function CastSection({ cast }: { cast: any[] }) {
   )
 }
 
-function SeasonsSection({ seasons }: { seasons: any[] }) {
+function VideosSection({ videos }: { videos: any[] }) {
+  // Filter for trailers and take the first few
+  const trailers = videos.filter((video) => video.type === "Trailer" && video.site === "YouTube").slice(0, 3);
+
+  if (trailers.length === 0) {
+    return null; // Don't render the section if no trailers are found
+  }
+
+  return (
+    <section className="mt-12">
+      <h2 className="text-3xl font-bold mb-6">Trailers</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {trailers.map((video) => (
+          <div key={video.id} className="aspect-video w-full rounded-lg overflow-hidden shadow-lg">
+            <iframe
+              src={`https://www.youtube.com/embed/${video.key}`}
+              title={video.name}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              className="w-full h-full"
+            ></iframe>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SeasonsSection({ seasons, params }: { seasons: any[], params: { id: string } }) {
   return (
     <section className="mt-12">
       <h2 className="text-3xl font-bold mb-6">Seasons</h2>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
         {seasons.map((season) => (
-          <Card key={season.id} className="overflow-hidden">
-            <div className="relative aspect-[2/3]">
-              <Image
-                src={
-                  season.poster_path
-                    ? `https://image.tmdb.org/t/p/w200${season.poster_path}`
-                    : "/placeholder-season.png"
-                }
-                alt={season.name}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 16vw"
-              />
-            </div>
-            <CardContent className="p-4">
-              <p className="font-semibold truncate">{season.name}</p>
-              <p className="text-sm text-muted-foreground">{season.episode_count} episodes</p>
-            </CardContent>
-          </Card>
+          <Link href={`/series/${params.id}/season/${season.season_number}`} key={season.id}>
+            <Card className="overflow-hidden hover:opacity-80 transition-opacity">
+              <div className="relative aspect-[2/3]">
+                <Image
+                  src={
+                    season.poster_path
+                      ? `https://image.tmdb.org/t/p/w200${season.poster_path}`
+                      : "/placeholder-season.png"
+                  }
+                  alt={season.name}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 16vw"
+                />
+              </div>
+              <CardContent className="p-4">
+                <p className="font-semibold truncate">{season.name}</p>
+                <p className="text-sm text-muted-foreground">{season.episode_count} episodes</p>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
     </section>
@@ -179,13 +233,20 @@ function SimilarSeriesSection({ similarSeries }: { similarSeries: any[] }) {
 }
 
 export default async function SeriesPage({ params }: { params: { id: string } }) {
-  let series
+  // Get seriesId from params immediately
+  const seriesId = params.id; 
+  let series;
+
   try {
-    series = await getSeriesDetails(params.id)
+    series = await getSeriesDetails(seriesId); // Use the local seriesId variable
   } catch (error) {
-    console.error("Error fetching series details:", error)
-    notFound()
+    console.error("Error fetching series details:", error);
+    notFound();
   }
+
+  // *** ADDED LOG ***
+  console.log("SeriesPage rendering SeasonsSection with seriesId:", seriesId);
+  // *** END ADDED LOG ***
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-12">
@@ -200,12 +261,19 @@ export default async function SeriesPage({ params }: { params: { id: string } })
         <SeriesInfo series={series} />
       </Suspense>
 
+      {/* Add Videos Section */}
+      {series?.videos?.results && series.videos.results.length > 0 && (
+        <Suspense fallback={<SectionSkeleton title="Trailers" />}>
+          <VideosSection videos={series.videos.results} />
+        </Suspense>
+      )}
+
       <Suspense fallback={<SectionSkeleton title="Cast" />}>
         <CastSection cast={series.credits.cast} />
       </Suspense>
 
       <Suspense fallback={<SectionSkeleton title="Seasons" />}>
-        <SeasonsSection seasons={series.seasons} />
+        <SeasonsSection seasons={series.seasons} params={params} />
       </Suspense>
 
       <Suspense fallback={<SectionSkeleton title="Similar Series" />}>
