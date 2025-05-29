@@ -4,9 +4,11 @@ import { useEffect, useState } from "react"
 import { MovieCard } from "./movie-card"
 import { MovieFilters } from "./movie-filters"
 import { Pagination } from "@/components/ui/pagination"
+import { db } from '@/lib/firebase/firebase'
+import { collection, getDocs, query } from 'firebase/firestore'
 
 interface Movie {
-  id: number
+  id: string
   title: string
   type: "movie" | "series"
   releaseDate: string
@@ -92,46 +94,43 @@ export function MovieGrid({ type, orderBy = "date", searchQuery = "" }: MovieGri
     }
   }
 
-  const fetchMovies = async (page: number) => {
+  const fetchMovies = async () => {
     setLoading(true)
     try {
-      const url = `https://api.themoviedb.org/3/movie/popular?language=en-US&page=${page}`
-      const options = {
-        method: "GET",
-        headers: {
-          accept: "application/json",
-          Authorization:
-            "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0NzgxYWE1NWExYmYzYzZlZjA1ZWUwYmMwYTk0ZmNiYyIsIm5iZiI6MTczODcwNDY2Mi4wMDMsInN1YiI6IjY3YTI4NzE1N2M4NjA5NjAyOThhNjBmNiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.kGBXkjuBtqgKXEGMVRWJ88LUWg_lykPOyBZKoOIBmcc",
-        },
-      }
+      // Firebase query to fetch all documents from the 'movies' collection
+      const moviesCollectionRef = collection(db, 'movies')
+      const q = query(moviesCollectionRef)
+      const querySnapshot = await getDocs(q)
 
-      const response = await fetch(url, options)
-      const data = await response.json()
-      setTotalPages(data.total_pages)
+      const firebaseMovies: Movie[] = []
+      querySnapshot.forEach((doc) => {
+        const data = doc.data()
+        // Map Firebase document data to the Movie interface
+        firebaseMovies.push({
+          id: doc.id, // Use document id as movie id
+          title: data.title,
+          type: data.type || 'movie', // Assuming a default type if not present
+          releaseDate: data.year ? `${data.year}-01-01` : 'Unknown', // Assuming year field exists
+          views: data.views || 0, // Assuming views field exists, default to 0
+          poster: data.poster || data.posterPath || '/placeholder.svg', // Using poster or posterPath
+          genre: data.category || data.genre || 'Unknown', // Using category or genre field
+        })
+      })
 
-      // Transform the API data
-      const transformedMovies =
-        data.results?.map((movie: any) => ({
-          id: movie.id,
-          title: movie.title,
-          type: type || (Math.random() > 0.5 ? "movie" : "series"),
-          releaseDate: movie.release_date,
-          views: Math.floor(Math.random() * 1000000),
-          poster: movie.poster_path
-            ? `https://image.tmdb.org/t/p/w300${movie.poster_path}`
-            : `/placeholder.svg?height=450&width=300&text=${movie.title}`,
-          genre: movie.genre_ids.map((id: number) => genres[id] || "Unknown").join(", "),
-        })) || []
+      // Note: Firebase fetching doesn't inherently provide total_pages like TMDB API.
+      // If you need pagination with Firebase, you would implement it differently.
+      // For simplicity, we'll just display all fetched movies for now.
+      setTotalPages(1) // Setting total pages to 1 as all data is fetched at once
 
-      // Filter and sort movies
-      const filteredMovies = filterByGenre(transformedMovies, selectedGenre)
+      // Filter and sort movies (existing logic remains)
+      const filteredMovies = filterByGenre(firebaseMovies, selectedGenre)
       const filteredByYear = filterByYear(filteredMovies, selectedYear)
       const sortedMovies = sortMovies(filteredByYear, selectedSort)
       const searchedMovies = filterMoviesBySearch(sortedMovies, searchQuery)
 
       setMovies(searchedMovies)
     } catch (error) {
-      console.error("Error fetching movies:", error)
+      console.error("Error fetching movies from Firebase:", error)
     } finally {
       setLoading(false)
     }
@@ -142,10 +141,11 @@ export function MovieGrid({ type, orderBy = "date", searchQuery = "" }: MovieGri
   }, [])
 
   useEffect(() => {
-    if (Object.keys(genres).length > 0) {
-      fetchMovies(currentPage)
-    }
-  }, [type, genres, selectedGenre, selectedYear, selectedSort, currentPage, searchQuery])
+    // Removed genres dependency as we are not fetching genres from TMDB for this display
+    // The fetchGenres call in the initial useEffect can remain if needed for filters,
+    // but it won't affect the movie data itself anymore.
+    fetchMovies()
+  }, [type, selectedGenre, selectedYear, selectedSort, searchQuery])
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
@@ -169,13 +169,14 @@ export function MovieGrid({ type, orderBy = "date", searchQuery = "" }: MovieGri
                 key={movie.id}
                 title={movie.title}
                 genre={movie.genre}
-                releaseDate={new Date(movie.releaseDate).getFullYear().toString()}
+                releaseDate={movie.releaseDate}
                 poster={movie.poster}
                 id={movie.id}
               />
             ))}
           </div>
-          <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
+          {/* Removed Pagination component as we are not paginating Firebase results this way */}
+          {/* <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} /> */}
         </>
       )}
     </div>

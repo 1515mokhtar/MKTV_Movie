@@ -30,7 +30,7 @@ export default function MoviesDisponiblePage() {
           setLoading(false)
           return
         }
-        const apiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY_V3
+        const apiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY
         if (!apiKey) {
           setError("Clé API TMDB manquante.")
           setLoading(false)
