@@ -8,6 +8,8 @@ import { Carousel, CarouselContent, CarouselItem, CarouselDots } from "@/compone
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+import { PopularMoviesGrid } from "@/components/popular-movies-grid"
+import { PopularSeriesGrid } from "@/components/popular-series-grid"
 
 interface Movie {
   id: number
@@ -205,7 +207,12 @@ export default function Home() {
           {/* Popular Movies Section */}
           <section>
             <h2 className="text-2xl font-bold mb-4">Popular Movies</h2>
-            <MovieGrid />
+            <PopularMoviesGrid />
+          </section>
+          {/* Popular Series Section */}
+          <section>
+            <h2 className="text-2xl font-bold mb-4">Popular Series</h2>
+            <PopularSeriesGrid />
           </section>
         </div>
       </main>

@@ -112,7 +112,15 @@ export function MovieGrid({ type, orderBy = "date", searchQuery = "" }: MovieGri
           type: data.type || 'movie', // Assuming a default type if not present
           releaseDate: data.year ? `${data.year}-01-01` : 'Unknown', // Assuming year field exists
           views: data.views || 0, // Assuming views field exists, default to 0
-          poster: data.poster || data.posterPath || '/placeholder.svg', // Using poster or posterPath
+          poster: data.poster
+            ? data.poster.startsWith('http')
+              ? data.poster
+              : `https://image.tmdb.org/t/p/w300${data.poster}`
+            : data.posterPath
+              ? data.posterPath.startsWith('http')
+                ? data.posterPath
+                : `https://image.tmdb.org/t/p/w300${data.posterPath}`
+              : '/placeholder.svg',
           genre: data.category || data.genre || 'Unknown', // Using category or genre field
         })
       })
