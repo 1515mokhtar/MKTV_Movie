@@ -25,35 +25,27 @@ async function fetchEpisodeDetailsFromFirebase(
   seasonNumber: string,
   episodeId: string // Now using episodeId
 ): Promise<EpisodeDetails | null> {
-  console.log(`[fetchEpisodeDetailsFromFirebase] Attempting to fetch details for Series: ${seriesId}, Season: ${seasonNumber}, Episode Document ID: ${episodeId}`); // More detailed log
-
   try {
     // Ensure Firebase db instance is available
     if (!db) { 
-      console.error("[fetchEpisodeDetailsFromFirebase] Firebase Firestore not initialized or accessible.");
       throw new Error("Firebase Firestore not initialized or accessible.");
     }
 
     // Reference to the specific episode document in Firebase
     const episodeDocRef = doc(db, 'series', seriesId, 'seasons', seasonNumber, 'episodes', episodeId);
-    console.log("[fetchEpisodeDetailsFromFirebase] Document reference created:", episodeDocRef.path); // Log document path
     
     const episodeDocSnap = await getDoc(episodeDocRef);
 
     if (episodeDocSnap.exists()) {
       const data = episodeDocSnap.data() as EpisodeDetails; // Cast data
-      console.log("[fetchEpisodeDetailsFromFirebase] Successfully fetched episode data from Firebase.", data); // Log fetched data
       // Combine doc.id with data for the EpisodeDetails object
       const episodeDetails = { ...data, id: episodeDocSnap.id };
-      console.log("[fetchEpisodeDetailsFromFirebase] Constructed EpisodeDetails object:", episodeDetails); // Log constructed object
       return episodeDetails;
     } else {
-      console.log(`[fetchEpisodeDetailsFromFirebase] Episode document with ID ${episodeId} not found in Firebase at path: ${episodeDocRef.path}`); // Log not found with path
       return null; // Return null if document not found
     }
 
   } catch (error) {
-    console.error(`[fetchEpisodeDetailsFromFirebase] Error fetching episode details from Firebase for ID ${episodeId}:`, error); // Log error
     return null; // Return null on error
   }
 }
@@ -80,7 +72,6 @@ export default function SeriesWatchPage({
 
   // Move fetchEpisodesInSeason to the top level of the component
   const fetchEpisodesInSeason = async (currentSeasonNumber: string) => {
-    console.log(`[WatchPage] Fetching episodes for series ${seriesId}, season ${currentSeasonNumber}...`);
     try {
       if (!db) throw new Error("Firebase Firestore not initialized.");
       const episodesCollectionRef = collection(db, 'series', seriesId, 'seasons', currentSeasonNumber, 'episodes');
@@ -90,16 +81,13 @@ export default function SeriesWatchPage({
         seasonNumber: currentSeasonNumber,
         ...doc.data() as { episode_number?: number, name?: string }
       }));
-      console.log(`[WatchPage] Found ${episodesData.length} episodes in season ${currentSeasonNumber}:`, episodesData);
       setEpisodesInSeason(episodesData);
     } catch (error) {
-      console.error(`[WatchPage] Error fetching episodes for series ${seriesId}, season ${currentSeasonNumber}:`, error);
     }
   };
 
   useEffect(() => {
     const getEpisodeData = async () => {
-      console.log("[WatchPage - useEffect 1] Attempting to fetch episode data triggered by URL change."); // Log useEffect trigger
       setLoading(true);
       setError(null);
 
@@ -107,18 +95,13 @@ export default function SeriesWatchPage({
       const details = await fetchEpisodeDetailsFromFirebase(seriesId, seasonNumber, episodeId);
 
       if (details) {
-        console.log("[WatchPage - useEffect 1] Episode details fetched successfully.", details);
         setEpisodeDetails(details);
-        console.log("[WatchPage - useEffect 1] Fetched urlepisode value:", details.urlepisode); // Log fetched urlepisode
-        // Use the urlepisode field from the fetched details
         setVideoUrl(details.urlepisode); // This should trigger iframe update if URL changes
       } else {
-        console.log("[WatchPage - useEffect 1] Could not fetch episode details.");
         setError("Could not fetch episode details.");
         setVideoUrl(null);
       }
       setLoading(false);
-      console.log("[WatchPage - useEffect 1] Episode data fetch process finished.");
     };
 
     getEpisodeData();
@@ -129,16 +112,13 @@ export default function SeriesWatchPage({
   useEffect(() => {
     // Fetch all season numbers for the series from Firebase
     const fetchSeasons = async () => {
-      console.log(`[WatchPage] Fetching season numbers for series ${seriesId}...`);
       try {
         if (!db) throw new Error("Firebase Firestore not initialized.");
         const seasonsCollectionRef = collection(db, 'series', seriesId, 'seasons');
         const snapshot = await getDocs(seasonsCollectionRef);
         const seasonNumbers = snapshot.docs.map(doc => doc.id); // Assuming season number is the doc ID
-        console.log(`[WatchPage] Found ${seasonNumbers.length} seasons:`, seasonNumbers);
         setSeasons(seasonNumbers);
       } catch (error) {
-        console.error(`[WatchPage] Error fetching seasons for series ${seriesId}:`, error);
       }
     };
 
@@ -151,7 +131,6 @@ export default function SeriesWatchPage({
   }, [seriesId, selectedSeason]);
 
   const handleSeasonSelect = async (season: string) => {
-    console.log(`[WatchPage] Season selected: ${season}. Fetching episodes for this season...`);
     setSelectedSeason(season);
     
     // Fetch episodes for the selected season
@@ -165,26 +144,21 @@ export default function SeriesWatchPage({
         ...doc.data() as { episode_number?: number, name?: string }
       }));
       
-      console.log(`[WatchPage] Found ${episodesData.length} episodes in season ${season}:`, episodesData);
       setEpisodesInSeason(episodesData);
       
       // If we have episodes, redirect to the first one
       if (episodesData.length > 0) {
         const firstEpisode = episodesData[0];
-        console.log(`[WatchPage] Redirecting to first episode of season ${season}: ${firstEpisode.id}`);
         router.push(`/serieswatch/${seriesId}/${season}/${firstEpisode.id}`);
       }
     } catch (error) {
-      console.error(`[WatchPage] Error fetching episodes for series ${seriesId}, season ${season}:`, error);
     }
   };
 
   const handleEpisodeSelect = (episodeIdToSelect: string) => {
-    console.log("[WatchPage] handleEpisodeSelect called with episode ID:", episodeIdToSelect); // Log handler call
     setSelectedEpisodeId(episodeIdToSelect); // Update selected episode state with ID
     // Redirect to the new episode URL using the selected episode's ID
-    console.log(`[WatchPage] Redirecting to /serieswatch/${seriesId}/${seasonNumber}/${episodeIdToSelect}`); // Log redirection URL
-     router.push(`/serieswatch/${seriesId}/${seasonNumber}/${episodeIdToSelect}`); 
+    router.push(`/serieswatch/${seriesId}/${seasonNumber}/${episodeIdToSelect}`); 
   };
 
   // Update the redirection logic to handle initial load and season selection

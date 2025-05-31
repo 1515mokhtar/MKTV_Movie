@@ -12,14 +12,7 @@ async function getSeriesDetails(id: string) {
   // Use the API key as a query parameter for v3 endpoints
   const apiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY_V3;
   
-  // *** ADDED LOGGING ***
-  console.log("Fetching series details for ID:", id);
-  console.log("Using API Key (first 5 chars):", apiKey ? apiKey.substring(0, 5) + "..." : "NOT CONFIGURED");
-  // *** END ADDED LOGGING ***
-
   if (!apiKey) {
-    console.error("TMDB API key (NEXT_PUBLIC_TMDB_API_V3) is not configured.");
-    // Optionally handle this error more gracefully, e.g., redirect or show message
     notFound(); // Treat as not found if key is missing
   }
 
@@ -34,22 +27,12 @@ async function getSeriesDetails(id: string) {
     next: { revalidate: 60 * 60 * 24 }, // Revalidate every 24 hours
   });
 
-  // *** ADDED LOGGING ***
-  console.log("TMDB API Response Status:", res.status);
   if (!res.ok) {
-    const errorData = await res.text().catch(() => "Could not parse error body"); // Use .text() for potentially non-JSON errors
-    console.error("Error fetching series details:", {
-      status: res.status,
-      statusText: res.statusText,
-      errorData: errorData,
-      requestUrl: url, // Log the URL being requested
-    });
     if (res.status === 404) {
       notFound();
     }
     throw new Error(`Failed to fetch series details: ${res.status} ${res.statusText}`);
   }
-  // *** END ADDED LOGGING ***
 
   return res.json();
 }
@@ -240,13 +223,8 @@ export default async function SeriesPage({ params }: { params: { id: string } })
   try {
     series = await getSeriesDetails(seriesId); // Use the local seriesId variable
   } catch (error) {
-    console.error("Error fetching series details:", error);
     notFound();
   }
-
-  // *** ADDED LOG ***
-  console.log("SeriesPage rendering SeasonsSection with seriesId:", seriesId);
-  // *** END ADDED LOG ***
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-12">
