@@ -211,64 +211,98 @@ export default async function SeasonPage({ params }: { params: { id: string, sea
 
   const episodes = seasonDetails?.episodes || [];
 
-  // Log still_path and videoUrl for each episode (using data from Firebase or TMDB)
-  episodes.forEach((episode: any) => {
-    console.log(`Episode ${episode.episode_number} Still Path:`, episode.still_path);
-    console.log(`Episode ${episode.episode_number} Video URL:`, episode.videoUrl); // videoUrl should be present if coming from Firebase or added during TMDB processing
-  });
-
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
-      <Link href={`/series/${params.id}`} className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors">
+      {/* Back button */}
+      <Link href={`/series/${params.id}`} className="inline-flex items-center text-mktv-accent hover:text-mktv-accent-dark transition-colors">
          <ChevronLeft className="w-4 h-4 mr-2" />
          Back to Series Details
       </Link>
 
-      <h1 className="text-4xl font-bold">{seasonDetails?.name || `Season ${params.seasonNumber}`}</h1>
+      {/* Season Header Section */}
+      <div className="flex flex-col md:flex-row gap-8">
+        {/* Season Poster */}
+        <div className="w-full md:w-1/3 lg:w-1/4">
+          <div className="aspect-[2/3] relative overflow-hidden rounded-lg shadow-lg">
+            {seasonDetails?.poster_path ? (
+              <Image
+                src={`https://image.tmdb.org/t/p/w500${seasonDetails.poster_path}`}
+                alt={seasonDetails?.name || `Season ${params.seasonNumber}`}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
+                priority
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                <span className="text-gray-400">No poster available</span>
+              </div>
+            )}
+          </div>
+        </div>
 
-      {seasonDetails?.episode_count && (
-         <p className="text-lg text-muted-foreground">{seasonDetails.episode_count} episodes</p>
-      )}
-
-      {/* List Episodes as Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {episodes.length > 0 ? (
-          episodes.map((episode: any) => (
-            <div key={episode.id} className="border rounded-lg overflow-hidden shadow-sm flex flex-col">
-              {/* Episode Poster Image (using still_path from Firebase data or TMDB or placeholder) */}
-              <div className="relative aspect-video w-full border-2 border-dashed border-red-500">{/* Remove border once images work */}
-                <Image
-                  src={
-                    episode.still_path // Use still_path from fetched data (Firebase or TMDB)
-                      ? `https://image.tmdb.org/t/p/w500${episode.still_path}` // Or use your own image hosting base URL
-                      : "/placeholder-episode.png" // Use a placeholder if no still_path
-                  }
-                  alt={`Episode ${episode.episode_number}: ${episode.name}`}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                />
-              </div>
-              {/* Episode Info */}
-              <div className="p-4 flex-grow">
-                <h2 className="font-semibold text-lg">E{episode.episode_number}: {episode.name}</h2>
-                {episode.overview && (
-                   <p className="text-sm text-muted-foreground mt-1 line-clamp-3">{episode.overview}</p>
-                )}
-              </div>
-              {/* Watch Button - Placeholder for client-side video playback logic */}
-              <div className="p-4 pt-0">
-                {/* This button needs to trigger client-side video playback using episode.videoUrl */}
-                {/* Convert this section to a Client Component or use a library that handles this */}
-                <button className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
-                  Watch Episode
-                </button>
-              </div>
+        {/* Season Info */}
+        <div className="w-full md:w-2/3 lg:w-3/4 space-y-4">
+          <h1 className="text-4xl font-bold">{seasonDetails?.name || `Season ${params.seasonNumber}`}</h1>
+          
+          {/* Only show episode count if greater than 0 */}
+          {seasonDetails?.episode_count > 0 && (
+            <p className="text-lg text-mktv-accent">{seasonDetails.episode_count} episodes</p>
+          )}
+          
+          {seasonDetails?.overview && (
+            <div className="mt-4">
+              <h2 className="text-xl font-semibold mb-2">Overview</h2>
+              <p className="text-base md:text-lg text-muted-foreground leading-relaxed md:leading-8">{seasonDetails.overview}</p>
             </div>
-          ))
-        ) : (
-          <div className="col-span-full border p-4 rounded-lg text-center text-muted-foreground">No episodes found for this season in Firebase.</div>
-        )}
+          )}
+        </div>
+      </div>
+
+      {/* Episodes Section */}
+      <div className="mt-12">
+        <h2 className="text-2xl font-bold mb-6">Episodes</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {episodes.map((episode: EpisodeData) => (
+            <Link 
+              key={episode.id} 
+              href={`/serieswatch/${params.id}/${params.seasonNumber}/${episode.id}`}
+              className="group"
+            >
+              <div className="bg-gray-900 rounded-lg overflow-hidden shadow-lg transition-transform duration-300 group-hover:scale-[1.02] group-hover:ring-2 group-hover:ring-mktv-accent">
+                {/* Episode Thumbnail */}
+                <div className="aspect-video relative overflow-hidden">
+                  {episode.still_path ? (
+                    <Image
+                      src={`https://image.tmdb.org/t/p/w500${episode.still_path}`}
+                      alt={`Episode ${episode.episode_number}: ${episode.name}`}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                      <span className="text-gray-400">No image available</span>
+                    </div>
+                  )}
+                  
+                  {/* Episode Number Badge */}
+                  <div className="absolute top-2 left-2 bg-mktv-accent text-white px-2 py-1 rounded text-sm font-medium">
+                    Episode {episode.episode_number}
+                  </div>
+                </div>
+                
+                {/* Episode Info */}
+                <div className="p-4">
+                  <h3 className="font-semibold text-lg mb-1 line-clamp-1">{episode.name || `Episode ${episode.episode_number}`}</h3>
+                  {episode.overview && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">{episode.overview}</p>
+                  )}
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { MovieCard } from "./movie-card"
 import { MovieFilters } from "./movie-filters"
 import { Pagination } from "@/components/ui/pagination"
-import { db } from '@/lib/firebase/firebase'
+import { db } from '@/lib/firebase'
 import { collection, getDocs, query } from 'firebase/firestore'
 
 interface Movie {

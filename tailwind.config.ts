@@ -47,6 +47,8 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        'mktv-accent': '#E50914',
+        'mktv-accent-dark': '#B00610',
       },
       borderRadius: {
         lg: "var(--radius)",
