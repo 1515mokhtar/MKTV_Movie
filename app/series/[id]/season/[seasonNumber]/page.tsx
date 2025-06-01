@@ -37,176 +37,134 @@ interface SeasonData {
 
 // Define an interface for the episode data structure
 interface EpisodeData {
-  id: string | number; // Adjust type based on your Firebase ID type
+  id: string | number;
   episode_number?: number;
   name?: string;
   overview?: string;
-  still_path?: string; // Episode image path
-  urlepisode: string; // Video URL
-  // Add other fields from your Firebase episode data
+  still_path?: string;
+  urlepisode: string;
+  air_date?: string;
+  vote_average?: number;
+  vote_count?: number;
+  runtime?: number;
 }
 
 // --- Modified Fetch Function to fetch from Firebase or TMDB and store --- 
 async function fetchAndStoreSeasonDetails(params: { id: string, seasonNumber: string }) {
-  // Explicitly access params properties
-  const seriesId = params.id; 
+  const seriesId = params.id;
   const seasonNumber = params.seasonNumber;
 
-  console.log("DEBUG: Inside fetchAndStoreSeasonDetails - Explicitly accessed Series ID:", seriesId, "Season Number:", seasonNumber);
+  console.log("DEBUG: Inside fetchAndStoreSeasonDetails - Series ID:", seriesId, "Season Number:", seasonNumber);
 
-  // *** Step 1: Attempt to fetch from Firebase ***
-  console.log("Attempting to fetch season details from Firebase...");
-  let seasonDataFromFirebase: SeasonData | null = null; 
-
-  try {
-    // Ensure Firebase db instance is available
-    if (!db) { throw new Error("Firebase Firestore not initialized or accessible."); }
-    
-    // Reference to the season document in Firebase
-    const seasonDocRef = doc(db, 'series', seriesId, 'seasons', seasonNumber);
-    const seasonDocSnap = await getDoc(seasonDocRef);
-
-    if (seasonDocSnap.exists()) {
-      seasonDataFromFirebase = seasonDocSnap.data() as SeasonData; // Cast data to SeasonData interface
-      // Fetch episodes subcollection
-      const episodesCollectionRef = collection(seasonDocRef, 'episodes');
-      const episodeDocsSnap = await getDocs(episodesCollectionRef);
-      seasonDataFromFirebase.episodes = episodeDocsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as EpisodeData })); // Map episode data
-      console.log("Successfully fetched season data from Firebase.", seasonDataFromFirebase);
-    } else {
-      console.log("Season document not found in Firebase.");
-    }
-
-  } catch (firebaseError) {
-    console.error("Error fetching from Firebase:", firebaseError);
+  // First, try to get episode groups
+  const apiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY_V3;
+  if (!apiKey) {
+    throw new Error("TMDB API key not configured");
   }
 
-  // *** Step 2: If not found in Firebase or incomplete, fetch from TMDB ***
-  // Check if seasonDataFromFirebase is null OR if episodes is missing/empty
-  if (seasonDataFromFirebase === null || !seasonDataFromFirebase.episodes || seasonDataFromFirebase.episodes.length === 0) {
-    console.log("Season data not found in Firebase or incomplete. Fetching from TMDB...");
-    const accessToken = process.env.TMDB_READ_ACCESS_TOKEN; 
-    console.log("Using Access Token (first 5 chars) for TMDB:", accessToken ? accessToken.substring(0, 5) + "..." : "NOT CONFIGURED");
+  // Get episode groups
+  const episodeGroupsUrl = `https://api.themoviedb.org/3/tv/${seriesId}/episode_groups?api_key=${apiKey}`;
+  const episodeGroupsRes = await fetch(episodeGroupsUrl, {
+    method: "GET",
+    headers: {
+      accept: "application/json",
+    },
+    next: { revalidate: 60 * 60 * 24 },
+  });
 
-    if (!accessToken) {
-      console.error("TMDB Read Access Token (TMDB_READ_ACCESS_TOKEN) is not configured. Cannot fetch from TMDB.");
-      // If neither Firebase nor TMDB is available, trigger notFound
-      notFound(); 
-    }
+  let episodeGroup = null;
+  if (episodeGroupsRes.ok) {
+    const episodeGroupsData = await episodeGroupsRes.json();
+    // Find the episode group that matches our season number
+    episodeGroup = episodeGroupsData.results.find((group: any) => 
+      group.name.toLowerCase().includes(`part ${seasonNumber}`) || 
+      group.name.toLowerCase().includes(`season ${seasonNumber}`)
+    );
+  }
 
-    const url = `https://api.themoviedb.org/3/tv/${seriesId}/season/${seasonNumber}?language=en-US`;
+  // If we found an episode group, use it to get the episodes
+  if (episodeGroup) {
+    const groupUrl = `https://api.themoviedb.org/3/tv/episode_group/${episodeGroup.id}?api_key=${apiKey}`;
+    const groupRes = await fetch(groupUrl, {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+      },
+      next: { revalidate: 60 * 60 * 24 },
+    });
 
-    try {
-      const res = await fetch(url, {
-        method: "GET",
-        headers: {
-          accept: "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        next: { revalidate: 60 * 60 * 24 },
-      });
-
-      console.log("TMDB Season API Response Status:", res.status);
-      if (!res.ok) {
-        const errorData = await res.text().catch(() => "Could not parse error body");
-        console.error("Error fetching season details from TMDB:", {
-          status: res.status,
-          statusText: res.statusText,
-          errorData: errorData,
-          requestUrl: url,
-        });
-        if (res.status === 404) {
-          notFound(); // Series/Season not found on TMDB
-        }
-        throw new Error(`Failed to fetch season details from TMDB: ${res.status} ${res.statusText}`);
-      }
-
-      const tmdbData = await res.json();
-      console.log("Successfully fetched season data from TMDB.", tmdbData);
-
-      // *** Step 3: Process and Store in Firebase ***
-      console.log("Processing and storing season data in Firebase...");
+    if (groupRes.ok) {
+      const groupData = await groupRes.json();
       
-      try {
-        // Ensure Firebase db instance is available
-        if (!db) { throw new Error("Firebase Firestore not initialized or accessible."); }
-        
-        // Reference to the season document in Firebase
-        const seasonDocRef = doc(db, 'series', seriesId, 'seasons', seasonNumber);
-        
-        // Data to save for the season document (optional)
-        const seasonDataToSave = {
-           id: tmdbData.id, // TMDB Season ID
-           name: tmdbData.name,
-           season_number: tmdbData.season_number,
-           // Provide a default value for episode_count if it's null or undefined
-           episode_count: tmdbData.episode_count ?? 0,
-           overview: tmdbData.overview, // Save season overview
-           poster_path: tmdbData.poster_path, // Save season poster path
-         };
-        
-        // Save the season document (using merge: true)
-         await setDoc(seasonDocRef, seasonDataToSave, { merge: true });
-         console.log("Saved season document to Firebase.");
-        
-        // Reference to the episodes subcollection under the season document
-        const episodesCollectionRef = collection(seasonDocRef, 'episodes');
-        
-        // Iterate through TMDB episodes and save each to Firebase
-        for (const tmdbEpisode of tmdbData.episodes) {
-          // Reference for the episode document (using TMDB episode ID as doc ID)
-           const episodeDocRef = doc(episodesCollectionRef, tmdbEpisode.id.toString());
-          
-          // Data to save for the episode document
-           const episodeDataToSave: EpisodeData = { // Type assertion
-             id: tmdbEpisode.id, // TMDB Episode ID
-             episode_number: tmdbEpisode.episode_number,
-             name: tmdbEpisode.name,
-             overview: tmdbEpisode.overview,
-             still_path: tmdbEpisode.still_path, // Episode image path
-             // Add other TMDB episode fields you need
-             urlepisode: '', // Placeholder for the video URL
-           };
-          
-          // Save the episode document (using merge: true)
-           await setDoc(episodeDocRef, episodeDataToSave, { merge: true });
-           console.log(`Saved Episode ${tmdbEpisode.episode_number} (${tmdbEpisode.id}) to Firebase.`);
-        }
-        
-        console.log("Finished attempting to save season and episode data to Firebase.");
+      // Get the series details to get the poster path
+      const seriesUrl = `https://api.themoviedb.org/3/tv/${seriesId}?api_key=${apiKey}`;
+      const seriesRes = await fetch(seriesUrl);
+      const seriesData = await seriesRes.json();
 
-      } catch (firebaseWriteError) {
-        console.error("Error saving to Firebase:", firebaseWriteError);
-        // Decide how to handle write errors - might not need to prevent rendering
-      }
+      // Transform the group data into our expected format
+      const episodes = groupData.episodes.map((ep: any) => ({
+        id: ep.id,
+        episode_number: ep.episode_number,
+        name: ep.name,
+        overview: ep.overview,
+        still_path: ep.still_path,
+        urlepisode: '',
+        air_date: ep.air_date,
+        vote_average: ep.vote_average,
+        vote_count: ep.vote_count,
+        runtime: ep.runtime
+      }));
 
-      // Return the data fetched from TMDB (which is now also saved to Firebase)
-      // Note: This returns the raw TMDB data structure. You might want to adjust 
-      // this to return data in the SeasonData structure if you need consistency.
-      return tmdbData; 
-
-    } catch (tmdbFetchError) {
-      console.error("Error during TMDB fetch or processing:", tmdbFetchError);
-      // If TMDB fetch fails after Firebase attempt, trigger notFound
-      notFound(); 
+      return {
+        id: episodeGroup.id,
+        name: episodeGroup.name,
+        season_number: parseInt(seasonNumber),
+        episode_count: episodes.length,
+        overview: groupData.overview || seriesData.overview || '',
+        poster_path: seriesData.poster_path, // Use series poster if no specific part poster
+        episodes: episodes,
+        air_date: groupData.air_date,
+        is_episode_group: true
+      };
     }
-
-  } else {
-    // Return the data successfully fetched from Firebase
-    console.log("Returning data from Firebase.", seasonDataFromFirebase);
-    return seasonDataFromFirebase;
   }
+
+  // If no episode group found or failed to fetch, fall back to regular season data
+  const url = `https://api.themoviedb.org/3/tv/${seriesId}/season/${seasonNumber}?api_key=${apiKey}`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      accept: "application/json",
+    },
+    next: { revalidate: 60 * 60 * 24 },
+  });
+
+  if (!res.ok) {
+    if (res.status === 404) {
+      notFound();
+    }
+    throw new Error(`Failed to fetch season details: ${res.status} ${res.statusText}`);
+  }
+
+  const seasonData = await res.json();
+  return {
+    ...seasonData,
+    episodes: seasonData.episodes.map((ep: any) => ({
+      ...ep,
+      urlepisode: '',
+    })),
+    is_episode_group: false
+  };
 }
 // --- End Modified Fetch Function ---
 
 export default async function SeasonPage({ params }: { params: { id: string, seasonNumber: string } }) {
   let seasonDetails;
   try {
-    // Call the new fetch and store function
     seasonDetails = await fetchAndStoreSeasonDetails(params);
   } catch (error) {
     console.error("Error loading season details:", error);
-    notFound(); // Show not found if fetching and storing fails
+    notFound();
   }
 
   const episodes = seasonDetails?.episodes || [];
@@ -243,7 +201,14 @@ export default async function SeasonPage({ params }: { params: { id: string, sea
 
         {/* Season Info */}
         <div className="w-full md:w-2/3 lg:w-3/4 space-y-4">
-          <h1 className="text-4xl font-bold">{seasonDetails?.name || `Season ${params.seasonNumber}`}</h1>
+          <div className="flex items-center gap-4">
+            <h1 className="text-4xl font-bold">{seasonDetails?.name || `Season ${params.seasonNumber}`}</h1>
+            {seasonDetails?.is_episode_group && (
+              <span className="bg-mktv-accent text-white px-3 py-1 rounded-full text-sm font-medium">
+                Part {params.seasonNumber}
+              </span>
+            )}
+          </div>
           
           {/* Only show episode count if greater than 0 */}
           {seasonDetails?.episode_count > 0 && (
@@ -255,6 +220,12 @@ export default async function SeasonPage({ params }: { params: { id: string, sea
               <h2 className="text-xl font-semibold mb-2">Overview</h2>
               <p className="text-base md:text-lg text-muted-foreground leading-relaxed md:leading-8">{seasonDetails.overview}</p>
             </div>
+          )}
+
+          {seasonDetails?.air_date && (
+            <p className="text-sm text-muted-foreground">
+              Air Date: {new Date(seasonDetails.air_date).toLocaleDateString()}
+            </p>
           )}
         </div>
       </div>
@@ -290,13 +261,30 @@ export default async function SeasonPage({ params }: { params: { id: string, sea
                   <div className="absolute top-2 left-2 bg-mktv-accent text-white px-2 py-1 rounded text-sm font-medium">
                     Episode {episode.episode_number}
                   </div>
+
+                  {/* Episode Rating */}
+                  {episode.vote_average && episode.vote_average > 0 && (
+                    <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-sm font-medium">
+                      ★ {episode.vote_average.toFixed(1)}
+                    </div>
+                  )}
                 </div>
                 
                 {/* Episode Info */}
                 <div className="p-4">
                   <h3 className="font-semibold text-lg mb-1 line-clamp-1">{episode.name || `Episode ${episode.episode_number}`}</h3>
+                  {episode.air_date && (
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {new Date(episode.air_date).toLocaleDateString()}
+                    </p>
+                  )}
                   {episode.overview && (
                     <p className="text-sm text-muted-foreground line-clamp-2">{episode.overview}</p>
+                  )}
+                  {episode.runtime && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {episode.runtime} minutes
+                    </p>
                   )}
                 </div>
               </div>

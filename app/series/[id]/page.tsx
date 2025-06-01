@@ -16,15 +16,30 @@ async function getSeriesDetails(id: string) {
     notFound(); // Treat as not found if key is missing
   }
 
-  const url = `https://api.themoviedb.org/3/tv/${id}?api_key=${apiKey}&append_to_response=credits,similar,videos`;
+  // First, get the episode groups for the series
+  const episodeGroupsUrl = `https://api.themoviedb.org/3/tv/${id}/episode_groups?api_key=${apiKey}`;
+  const episodeGroupsRes = await fetch(episodeGroupsUrl, {
+    method: "GET",
+    headers: {
+      accept: "application/json",
+    },
+    next: { revalidate: 60 * 60 * 24 },
+  });
 
+  let episodeGroups = [];
+  if (episodeGroupsRes.ok) {
+    const episodeGroupsData = await episodeGroupsRes.json();
+    episodeGroups = episodeGroupsData.results || [];
+  }
+
+  // Then get the series details with all other data
+  const url = `https://api.themoviedb.org/3/tv/${id}?api_key=${apiKey}&append_to_response=credits,similar,videos`;
   const res = await fetch(url, {
     method: "GET",
     headers: {
       accept: "application/json",
-      // Remove Bearer token header
     },
-    next: { revalidate: 60 * 60 * 24 }, // Revalidate every 24 hours
+    next: { revalidate: 60 * 60 * 24 },
   });
 
   if (!res.ok) {
@@ -34,7 +49,36 @@ async function getSeriesDetails(id: string) {
     throw new Error(`Failed to fetch series details: ${res.status} ${res.statusText}`);
   }
 
-  return res.json();
+  const seriesData = await res.json();
+  
+  // Add episode groups to the series data
+  return {
+    ...seriesData,
+    episode_groups: episodeGroups
+  };
+}
+
+async function getPartsList(id: string) {
+  const apiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY_V3;
+  if (!apiKey) return [];
+  const episodeGroupsUrl = `https://api.themoviedb.org/3/tv/${id}/episode_groups?api_key=${apiKey}`;
+  const episodeGroupsRes = await fetch(episodeGroupsUrl);
+  if (!episodeGroupsRes.ok) return [];
+  const episodeGroupsData = await episodeGroupsRes.json();
+  const partsGroup = episodeGroupsData.results.find((group: any) => group.name === "Parts (edited version)");
+  if (!partsGroup) return [];
+  const groupUrl = `https://api.themoviedb.org/3/tv/episode_group/${partsGroup.id}?api_key=${apiKey}`;
+  const groupRes = await fetch(groupUrl);
+  if (!groupRes.ok) return [];
+  const groupData = await groupRes.json();
+  // Each subgroup is a part (e.g., Part 1, Part 2, ...)
+  return groupData.groups.map((sub: any) => ({
+    id: sub.id,
+    name: sub.name,
+    partNumber: (sub.name.match(/Part (\d+)/) || [])[1],
+    poster_path: sub.poster_path, // Only use subgroup poster here
+    episode_count: sub.episodes.length,
+  })).filter((sub: any) => sub.partNumber);
 }
 
 function SeriesInfo({ series }: { series: any }) {
@@ -150,12 +194,18 @@ function VideosSection({ videos }: { videos: any[] }) {
 }
 
 function SeasonsSection({ seasons, params }: { seasons: any[], params: { id: string } }) {
+  // Filter out any items that might be episode groups (parts) if they somehow ended up here
+  const regularSeasons = seasons.filter(season => !season.is_episode_group);
+
   return (
     <section className="mt-12">
       <h2 className="text-3xl font-bold mb-6">Seasons</h2>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
-        {seasons.map((season) => (
-          <Link href={`/series/${params.id}/season/${season.season_number}`} key={season.id}>
+        {regularSeasons.map((season) => (
+          <Link 
+            href={`/series/${params.id}/season/${season.season_number}`} 
+            key={season.id}
+          >
             <Card className="overflow-hidden hover:opacity-80 transition-opacity">
               <div className="relative aspect-[2/3]">
                 <Image
@@ -215,13 +265,60 @@ function SimilarSeriesSection({ similarSeries }: { similarSeries: any[] }) {
   )
 }
 
-export default async function SeriesPage({ params }: { params: { id: string } }) {
-  // Get seriesId from params immediately
-  const seriesId = params.id; 
-  let series;
+function PartsSection({ parts, seriesId, seriesPosterPath }: { parts: any[], seriesId: string, seriesPosterPath?: string }) {
+  if (!parts.length) return null;
+  return (
+    <section className="mt-12">
+      <h2 className="text-3xl font-bold mb-6">Parts</h2>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+        {parts.map((part) => {
+          // Determine the poster to display: part poster, then series poster, then placeholder
+          const posterToDisplay = part.poster_path || seriesPosterPath;
 
+          return (
+            <Link
+              href={`/series/${seriesId}/part/${part.partNumber}`}
+              key={part.id}
+            >
+              <div className="overflow-hidden hover:opacity-80 transition-opacity rounded-lg shadow-lg bg-white">
+                <div className="relative aspect-[2/3]">
+                  {posterToDisplay ? (
+                    <Image
+                      src={`https://image.tmdb.org/t/p/w200${posterToDisplay}`}
+                      alt={part.name}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 16vw"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                      <span className="text-gray-400">No image available</span>
+                    </div>
+                  )}
+                  <div className="absolute top-2 right-2 bg-mktv-accent text-white px-2 py-1 rounded text-xs font-medium">
+                    Part
+                  </div>
+                </div>
+                <div className="p-4">
+                  <p className="font-semibold truncate">{part.name}</p>
+                  <p className="text-sm text-muted-foreground">{part.episode_count} episodes</p>
+                </div>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+export default async function SeriesPage({ params }: { params: { id: string } }) {
+  const seriesId = params.id;
+  let series;
+  let parts = [];
   try {
-    series = await getSeriesDetails(seriesId); // Use the local seriesId variable
+    series = await getSeriesDetails(seriesId);
+    parts = await getPartsList(seriesId);
   } catch (error) {
     notFound();
   }
@@ -239,6 +336,9 @@ export default async function SeriesPage({ params }: { params: { id: string } })
         <SeriesInfo series={series} />
       </Suspense>
 
+      {/* Parts Section */}
+      <PartsSection parts={parts} seriesId={seriesId} seriesPosterPath={series?.poster_path} />
+
       {/* Add Videos Section */}
       {series?.videos?.results && series.videos.results.length > 0 && (
         <Suspense fallback={<SectionSkeleton title="Trailers" />}>
@@ -251,14 +351,17 @@ export default async function SeriesPage({ params }: { params: { id: string } })
       </Suspense>
 
       <Suspense fallback={<SectionSkeleton title="Seasons" />}>
-        <SeasonsSection seasons={series.seasons} params={params} />
+        <SeasonsSection 
+          seasons={series.seasons} 
+          params={params} 
+        />
       </Suspense>
 
       <Suspense fallback={<SectionSkeleton title="Similar Series" />}>
         <SimilarSeriesSection similarSeries={series.similar.results} />
       </Suspense>
     </div>
-  )
+  );
 }
 
 function SeriesInfoSkeleton() {
