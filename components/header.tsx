@@ -29,6 +29,7 @@ import { useAuth } from "@/app/contexts/AuthContext"
 import { addDoc, collection, doc, serverTimestamp, updateDoc } from "firebase/firestore"
 import { signOut } from "firebase/auth"
 import { auth, db } from "@/lib/firebase"
+import Image from "next/image"
 
 interface SearchResult {
   popularity: number
@@ -250,102 +251,103 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
             </Button>
           </form>
 
-          {/* Résultats de recherche overlay, responsive, max-w-80vw et centrés */}
-          {(isSearchFocused && (searchQuery.trim().length >= 5 || forceShowResults)) && (
-            <div className="absolute left-1/2 -translate-x-1/2 w-[98vw] max-w-[80vw] sm:max-w-[60vw] md:max-w-[60vw] bg-background rounded-md shadow-md z-50 max-h-96 overflow-y-auto mt-1 p-2">
-              {isLoading ? (
-                <div className="p-4 text-center text-base">Loading...</div>
-              ) : error ? (
-                <div className="p-4 text-center text-red-500 text-base">{error}</div>
-              ) : searchResults.length === 0 ? (
-                <div className="p-4 text-center text-base">No results found.</div>
-              ) : (
-                <ul className="max-h-80 overflow-y-auto space-y-2">
+          {/* Search Results Dropdown */}
+          {isSearchFocused && searchQuery.length > 0 && (searchResults.length > 0 || isLoading || error) && (
+            <div className="absolute top-full left-0 right-0 bg-background border border-border rounded-lg shadow-lg mt-2 z-10 max-h-[400px] overflow-y-auto">
+              {isLoading && <div className="p-4 text-center text-muted-foreground">Loading...</div>}
+              {error && <div className="p-4 text-center text-destructive">Error: {error}</div>}
+              {!isLoading && !error && searchResults.length === 0 && (
+                 <div className="p-4 text-center text-muted-foreground">No results found.</div>
+              )}
+              {!isLoading && !error && searchResults.length > 0 && (
+                <ul className="divide-y divide-border">
                   {searchResults.map((result) => (
-                    <li
-                      key={result.id}
-                      onClick={() => handleResultClick(result)}
-                      className="cursor-pointer p-2 hover:bg-muted/50 flex items-center gap-3 rounded-lg"
-                    >
-                      <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg">
+                    <li key={result.id} className="p-2 hover:bg-muted cursor-pointer" onClick={() => handleResultClick(result)}>
+                      <div className="flex items-center gap-2">
                         {result.poster_path ? (
-                          <img
-                            src={`https://image.tmdb.org/t/p/w92${result.poster_path}`}
-                            alt={result.title || result.name || "Media"}
-                            className="h-full w-full object-cover"
-                          />
+                           <Image
+                             src={`https://image.tmdb.org/t/p/w92${result.poster_path}`}
+                             alt={result.title || result.name || "No title"}
+                             width={32}
+                             height={48}
+                             className="rounded object-cover"
+                           />
                         ) : (
-                          <div className="h-full w-full bg-muted flex items-center justify-center">
-                            {result.media_type === "movie" ? (
-                              <Film className="h-6 w-6 text-muted-foreground" />
-                            ) : (
-                              <Tv className="h-6 w-6 text-muted-foreground" />
-                            )}
-                          </div>
+                           <div className="w-8 h-12 bg-muted-foreground rounded flex items-center justify-center text-xs text-background">No Img</div>
                         )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="truncate font-medium text-base">{result.title || result.name}</p>
-                      </div>
-                      <div className="flex-shrink-0 px-2 py-1 rounded-full bg-muted text-xs font-medium">
-                        {result.media_type === "movie" ? (
-                          <span className="flex items-center gap-1">
-                            <Film className="h-4 w-4" />
-                            Film
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1">
-                            <Tv className="h-4 w-4" />
-                            Série
-                          </span>
-                        )}
+                        <div>
+                           <p className="font-semibold text-sm line-clamp-1">{result.title || result.name}</p>
+                           {result.media_type && (
+                             <p className="text-xs text-muted-foreground">{result.media_type === 'movie' ? 'Movie' : 'Series'}</p>
+                           )}
+                        </div>
                       </div>
                     </li>
                   ))}
-                  {searchQuery.trim() && (
-                    <li className="p-2 text-center border-t">
-                      <Button
-                        variant="link"
-                        className="w-full"
-                        onClick={() => router.push(`/search-results?query=${encodeURIComponent(searchQuery)}`)}
-                      >
-                        Voir tous les résultats
-                      </Button>
-                    </li>
-                  )}
                 </ul>
               )}
+               {!isLoading && !error && (searchQuery.length < 5 || forceShowResults) && searchResults.length > 0 && (
+                <div className="p-2 border-t border-border">
+                   <Link href={`/search-results?query=${encodeURIComponent(searchQuery)}`} className="text-sm text-mktv-accent hover:underline text-center block">
+                      See all results
+                   </Link>
+                </div>
+               )}
             </div>
           )}
         </div>
 
-        <NavigationMenu className="hidden md:flex ml-auto">
+        <NavigationMenu>
           <NavigationMenuList>
+            {/* Movies Navigation Menu with Sub-list */}
             <NavigationMenuItem>
               <NavigationMenuTrigger>Movies</NavigationMenuTrigger>
               <NavigationMenuContent>
-                <div className="flex flex-col gap-1 px-2 py-1">
-                  <NavigationMenuLink asChild>
-                    <Link href="/movies" className="block px-4 py-2 hover:bg-muted rounded transition-colors whitespace-nowrap">
-                      All movies
-                    </Link>
-                  </NavigationMenuLink>
-                  <NavigationMenuLink asChild>
-                    <Link href="/movies/disponible" className="block px-4 py-2 hover:bg-muted rounded transition-colors whitespace-nowrap">
-                      Movies disponible
-                    </Link>
-                  </NavigationMenuLink>
-                </div>
+                 <ul className="grid gap-3 p-4 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
+                   <li>
+                     <NavigationMenuLink asChild>
+                       <Link href="/movies">
+                         All Movies
+                       </Link>
+                     </NavigationMenuLink>
+                   </li>
+                   <li>
+                      <NavigationMenuLink asChild>
+                        <Link href="/movies/disponible">
+                          Movies disponible
+                        </Link>
+                      </NavigationMenuLink>
+                   </li>
+                  </ul>
+               </NavigationMenuContent>
+            </NavigationMenuItem>
+            {/* Series Navigation Menu with Sub-list */}
+            <NavigationMenuItem>
+              <NavigationMenuTrigger>Series</NavigationMenuTrigger>
+              <NavigationMenuContent>
+                <ul className="grid gap-3 p-4 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
+                  <li>
+                    <NavigationMenuLink asChild>
+                      <Link href="/series">
+                        All Series
+                      </Link>
+                    </NavigationMenuLink>
+                  </li>
+                  <li>
+                     <NavigationMenuLink asChild>
+                       <Link href="/series/seriesdisponible">
+                         Series Disponible
+                       </Link>
+                     </NavigationMenuLink>
+                  </li>
+                 </ul>
               </NavigationMenuContent>
             </NavigationMenuItem>
             <NavigationMenuItem>
-              <Link href="/series" legacyBehavior passHref>
-                <NavigationMenuLink className={navigationMenuTriggerStyle()}>Series</NavigationMenuLink>
-              </Link>
-            </NavigationMenuItem>
-            <NavigationMenuItem>
               <Link href="/watchlist" legacyBehavior passHref>
-                <NavigationMenuLink className={navigationMenuTriggerStyle()}>Watchlist</NavigationMenuLink>
+                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                  Watchlist
+                </NavigationMenuLink>
               </Link>
             </NavigationMenuItem>
           </NavigationMenuList>
