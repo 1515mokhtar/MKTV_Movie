@@ -54,7 +54,9 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
+  const authContext = useAuth();
+  const user = authContext?.user;
+  const authLoading = authContext?.loading;
 
   
   // For double-click detection
@@ -297,23 +299,23 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
           )}
         </div>
 
-        <NavigationMenu>
+        <NavigationMenu className="hidden md:block">
           <NavigationMenuList>
             {/* Movies Navigation Menu with Sub-list */}
             <NavigationMenuItem>
               <NavigationMenuTrigger>Movies</NavigationMenuTrigger>
               <NavigationMenuContent>
-                 <ul className="grid gap-3 p-4 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
+                <ul className="flex flex-col gap-3 p-4">
                    <li>
                      <NavigationMenuLink asChild>
-                       <Link href="/movies">
+                       <Link href="/movies" className="whitespace-nowrap">
                          All Movies
                        </Link>
                      </NavigationMenuLink>
                    </li>
                    <li>
                       <NavigationMenuLink asChild>
-                        <Link href="/movies/disponible">
+                        <Link href="/movies/disponible" className="whitespace-nowrap">
                           Movies disponible
                         </Link>
                       </NavigationMenuLink>
@@ -325,17 +327,17 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
             <NavigationMenuItem>
               <NavigationMenuTrigger>Series</NavigationMenuTrigger>
               <NavigationMenuContent>
-                <ul className="grid gap-3 p-4 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
+                 <ul className="flex flex-col gap-3 p-4">
                   <li>
                     <NavigationMenuLink asChild>
-                      <Link href="/series">
+                      <Link href="/series" className="whitespace-nowrap">
                         All Series
                       </Link>
                     </NavigationMenuLink>
                   </li>
                   <li>
                      <NavigationMenuLink asChild>
-                       <Link href="/series/seriesdisponible">
+                       <Link href="/series/seriesdisponible" className="whitespace-nowrap">
                          Series Disponible
                        </Link>
                      </NavigationMenuLink>
@@ -370,6 +372,9 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
               </Link>
               <Link href="/series" className="text-lg font-semibold">
                 Series
+              </Link>
+              <Link href="/series/seriesdisponible" className="text-lg font-semibold">
+                Series Disponible
               </Link>
               <Link href="/watchlist" className="text-lg font-semibold">
                 Watchlist

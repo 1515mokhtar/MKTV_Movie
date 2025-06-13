@@ -104,7 +104,7 @@ export function EnhancedMovieCard({
           )}
               <div className="flex space-x-1">
               <Star className="w-6 h-6 text-yellow-400" />
-              <span className="text-lg font-semibold">{movie.rater}</span>
+              <span className="text-lg font-semibold">{movie.rating}</span>
               </div>
             </div>
           )}
