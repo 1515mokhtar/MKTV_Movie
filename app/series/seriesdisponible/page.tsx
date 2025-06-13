@@ -11,6 +11,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { SeriesFilters } from "@/components/series-filters";
 
 interface TmdbSeriesData {
   id: number;
@@ -25,6 +26,7 @@ interface TmdbSeriesData {
   number_of_seasons: number;
   number_of_episodes: number;
   vote_count: number;
+  popularity: number;
 }
 
 interface FirebaseSeries {
@@ -41,6 +43,8 @@ interface FirebaseSeries {
   number_of_episodes: number;
   vote_count: number;
   last_updated: string;
+  popularity: number;
+  name_lowercase: string;
 }
 
 export default function SeriesDisponiblePage() {
@@ -56,65 +60,123 @@ export default function SeriesDisponiblePage() {
   const [lastVisible, setLastVisible] = useState<DocumentSnapshot | null>(null);
   const ITEMS_PER_PAGE = 20;
 
+  // New state for filters
+  const [selectedGenre, setSelectedGenre] = useState<string>("all");
+  const [selectedYear, setSelectedYear] = useState<string>("all");
+  const [selectedSort, setSelectedSort] = useState<string>("last_updated_desc"); // Default sort
+
+  const [genresList, setGenresList] = useState<{ id: number; name: string }[]>([]);
+
   const router = useRouter();
 
-  // Function to fetch series from Firebase with pagination
-  const fetchSeriesFromFirebase = async (page: number) => {
+  // Function to fetch genres from TMDB
+  useEffect(() => {
+    const fetchGenres = async () => {
+      try {
+        const response = await fetch("https://api.themoviedb.org/3/genre/tv/list?language=en-US", {
+          method: "GET",
+          headers: {
+            accept: "application/json",
+            Authorization:
+              "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0NzgxYWE1NWExYmYzYzZlZjA1ZWUwYmMwYTk0ZmNiYyIsIm5iZiI6MTczODcwNDY2Mi4wMDMsInN1YiI6IjY3YTI4NzE1N2M4NjA5NjAyOThhNjBmNiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.kGBXkjuBtqgKXEGMVRWJ88LUWg_lykPOyBZKoOIBmcc",
+          },
+        });
+        const data = await response.json();
+        setGenresList(data.genres);
+      } catch (error) {
+        console.error("Error fetching genres:", error);
+      }
+    };
+    fetchGenres();
+  }, []);
+
+  // Function to fetch series from Firebase with pagination and filters
+  const fetchSeriesFromFirebase = async (page: number, genre: string, year: string, sort: string, search: string) => {
     setIsLoadingSeries(true);
     try {
-      const seriesRef = collection(db, "series");
+      let seriesQuery = collection(db, "series");
+      let queryConstraints: any[] = [];
+
+      // Apply filters
+      if (genre !== "all") {
+        queryConstraints.push(where("genres", "array-contains", { name: genre, id: genresList.find(g => g.name === genre)?.id }));
+      }
+      if (year !== "all") {
+        console.log("Applying year filter for:", year);
+        queryConstraints.push(where("first_air_date", ">=", `${year}-01-01`));
+        queryConstraints.push(where("first_air_date", "<=", `${year}-12-31`));
+      }
       
-      // Get total count first
-      const totalSnapshot = await getDocs(seriesRef);
+      // Apply search (partial match)
+      if (search) {
+        const searchLower = search.toLowerCase();
+        queryConstraints.push(where("name_lowercase", ">=", searchLower));
+        queryConstraints.push(where("name_lowercase", "<=", searchLower + "\uf8ff"));
+        // Note: For 'name_lowercase', you'd need to ensure series documents in Firebase
+        // have a 'name_lowercase' field populated with the lowercase version of the series name.
+        // If not, this search will not work as expected and might require client-side filtering
+        // or a different indexing strategy.
+      }
+
+      // Apply sorting
+      switch (sort) {
+        case "first_air_date_desc":
+          queryConstraints.push(orderBy("first_air_date", "desc"));
+          break;
+        case "vote_average_desc":
+          queryConstraints.push(orderBy("vote_average", "desc"));
+          break;
+        case "popularity_desc":
+          queryConstraints.push(orderBy("popularity", "desc")); // Assuming you have a 'popularity' field
+          break;
+        case "name_asc":
+          queryConstraints.push(orderBy("name", "asc"));
+          break;
+        default:
+          queryConstraints.push(orderBy("last_updated", "desc"));
+          break;
+      }
+
+
+      // Get total count first (without pagination limits)
+      const totalSnapshot = await getDocs(query(seriesQuery, ...queryConstraints));
       const total = totalSnapshot.size;
       setTotalPages(Math.ceil(total / ITEMS_PER_PAGE));
 
-      // If it's the first page or we're searching, start from the beginning
+      // Apply pagination
       if (page === 1) {
-        const q = query(
-          seriesRef,
-          orderBy("last_updated", "desc"),
-          limit(ITEMS_PER_PAGE)
-        );
-        
-        const snapshot = await getDocs(q);
-        const seriesData: FirebaseSeries[] = [];
-        
-        snapshot.forEach((doc) => {
-          seriesData.push({
-            id: doc.id,
-            ...doc.data() as Omit<FirebaseSeries, 'id'>
-          });
-        });
-
-        setSeries(seriesData);
-        setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+        queryConstraints.push(limit(ITEMS_PER_PAGE));
       } else {
-        // For subsequent pages, use the last visible document
         if (lastVisible) {
-          const q = query(
-            seriesRef,
-            orderBy("last_updated", "desc"),
-            startAfter(lastVisible),
-            limit(ITEMS_PER_PAGE)
-          );
-          
-          const snapshot = await getDocs(q);
-          const seriesData: FirebaseSeries[] = [];
-          
-          snapshot.forEach((doc) => {
-            seriesData.push({
-              id: doc.id,
-              ...doc.data() as Omit<FirebaseSeries, 'id'>
-            });
-          });
-
-          setSeries(seriesData);
-          setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+          queryConstraints.push(startAfter(lastVisible));
+          queryConstraints.push(limit(ITEMS_PER_PAGE));
         }
       }
-    } catch (error) {
+
+      const q = query(seriesQuery, ...queryConstraints);
+      console.log("Constructed Firebase Query:", q);
+      console.log("Query Constraints:", queryConstraints); // Log the query constraints
+
+      const snapshot = await getDocs(q);
+      const seriesData: FirebaseSeries[] = [];
+
+      snapshot.forEach((doc) => {
+        seriesData.push({
+          id: doc.id,
+          ...doc.data() as Omit<FirebaseSeries, 'id'>
+        });
+      });
+
+      setSeries(seriesData);
+      setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+    } catch (error: any) { // Type the error as 'any' for now to resolve linter errors
       console.error("Error fetching series:", error);
+      console.error("Error details:", {
+        name: error.name,
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
       toast.error("Failed to load series");
     } finally {
       setIsLoadingSeries(false);
@@ -122,8 +184,8 @@ export default function SeriesDisponiblePage() {
   };
 
   useEffect(() => {
-    fetchSeriesFromFirebase(currentPage);
-  }, [currentPage]);
+    fetchSeriesFromFirebase(currentPage, selectedGenre, selectedYear, selectedSort, searchQuery);
+  }, [currentPage, selectedGenre, selectedYear, selectedSort, searchQuery]);
 
   const fetchAllSeries = async () => {
     setIsLoading(true);
@@ -193,6 +255,8 @@ export default function SeriesDisponiblePage() {
               number_of_seasons: seriesDetails.number_of_seasons,
               number_of_episodes: seriesDetails.number_of_episodes,
               vote_count: seriesDetails.vote_count,
+              popularity: seriesDetails.popularity,
+              name_lowercase: seriesDetails.name.toLowerCase(),
               last_updated: new Date().toISOString(),
             });
 
@@ -207,7 +271,7 @@ export default function SeriesDisponiblePage() {
 
       toast.success("All series have been successfully processed and stored!");
       // Refresh the series list after fetching new data
-      fetchSeriesFromFirebase(currentPage);
+      fetchSeriesFromFirebase(currentPage, selectedGenre, selectedYear, selectedSort, searchQuery);
     } catch (error) {
       console.error("Error fetching and storing series:", error);
       toast.error("An error occurred while processing series");
@@ -222,9 +286,19 @@ export default function SeriesDisponiblePage() {
   };
 
   const handleSearch = () => {
-    if (searchQuery.trim()) {
-      router.push(`/series/resultssearchseries?query=${encodeURIComponent(searchQuery)}`);
+    // Trigger re-fetch with new search query
+    setCurrentPage(1); // Reset to first page for new search
+    fetchSeriesFromFirebase(1, selectedGenre, selectedYear, selectedSort, searchQuery);
+    router.push(`/series/resultssearchseries?query=${encodeURIComponent(searchQuery)}`); // Keep redirection to results page
+  };
+
+  const getYearOptions = () => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let i = currentYear; i >= 1900; i--) { // Adjust range as needed
+      years.push(i.toString());
     }
+    return years;
   };
 
   return (
@@ -260,6 +334,15 @@ export default function SeriesDisponiblePage() {
           </div>
         </div>
 
+        {/* Series Filters */}
+        <SeriesFilters
+          genres={genresList}
+          onGenreChange={setSelectedGenre}
+          onYearChange={setSelectedYear}
+          onSortChange={setSelectedSort}
+          yearOptions={getYearOptions()}
+        />
+
         {isLoading && (
           <div className="space-y-2">
             <Progress value={progress} className="w-full" />
@@ -290,7 +373,7 @@ export default function SeriesDisponiblePage() {
                       id={parseInt(item.id)}
                       title={item.name}
                       genre={item.genres.map(g => g.name).join(", ")}
-                      releaseDate={new Date(item.first_air_date).getFullYear().toString()}
+                      releaseDate={item.first_air_date ? new Date(item.first_air_date).getFullYear().toString() : "N/A"}
                       poster={item.poster_path ? `https://image.tmdb.org/t/p/w300${item.poster_path}` : "/placeholder.svg"}
                     />
                   ))}

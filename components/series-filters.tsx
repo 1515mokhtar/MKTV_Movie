@@ -5,9 +5,10 @@ interface SeriesFiltersProps {
   onGenreChange: (genre: string) => void
   onYearChange: (year: string) => void
   onSortChange: (sort: string) => void
+  yearOptions: string[]
 }
 
-export function SeriesFilters({ genres, onGenreChange, onYearChange, onSortChange }: SeriesFiltersProps) {
+export function SeriesFilters({ genres, onGenreChange, onYearChange, onSortChange, yearOptions }: SeriesFiltersProps) {
   return (
     <form className="flex flex-col gap-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -30,7 +31,11 @@ export function SeriesFilters({ genres, onGenreChange, onYearChange, onSortChang
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All</SelectItem>
-            {/* Add year options here */}
+            {yearOptions.map((year) => (
+              <SelectItem key={year} value={year}>
+                {year}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={"date"} onValueChange={onSortChange}>
@@ -38,9 +43,10 @@ export function SeriesFilters({ genres, onGenreChange, onYearChange, onSortChang
             <SelectValue placeholder="Sort By" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="date">Release Date</SelectItem>
-            <SelectItem value="views">Views</SelectItem>
-            <SelectItem value="rating">Rating</SelectItem>
+            <SelectItem value="first_air_date_desc">Release Date</SelectItem>
+            <SelectItem value="popularity_desc">Popularity</SelectItem>
+            <SelectItem value="vote_average_desc">Rating</SelectItem>
+            <SelectItem value="name_asc">Name (A-Z)</SelectItem>
           </SelectContent>
         </Select>
       </div>
