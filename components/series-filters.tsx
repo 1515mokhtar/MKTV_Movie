@@ -6,6 +6,7 @@ interface SeriesFiltersProps {
   onYearChange: (year: string) => void
   onSortChange: (sort: string) => void
   yearOptions: string[]
+  selectedYear: string
 }
 
 export function SeriesFilters({
@@ -14,6 +15,7 @@ export function SeriesFilters({
   onYearChange,
   onSortChange,
   yearOptions,
+  selectedYear,
 }: SeriesFiltersProps) {
   console.log("SeriesFilters received genres:", genres);
 
@@ -43,7 +45,7 @@ export function SeriesFilters({
       </Select>
 
       {/* Year Filter */}
-      <Select onValueChange={onYearChange} defaultValue="all">
+      <Select onValueChange={onYearChange} value={selectedYear}>
         <SelectTrigger className="w-full sm:w-[180px]">
           <SelectValue placeholder="Select Year" />
         </SelectTrigger>

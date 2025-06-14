@@ -166,9 +166,15 @@ export default function SeriesDisponiblePage() {
     console.log("Current genresList state (after set):", genresList);
   }, [genresList]);
 
+  // Refetch series when filters or page change
+  useEffect(() => {
+    console.log("Triggering fetchSeriesFromFirebase with states:", { currentPage, selectedGenre, selectedYear, selectedSort, searchQuery });
+    fetchSeriesFromFirebase(currentPage, selectedGenre, selectedYear, selectedSort, searchQuery);
+  }, [currentPage, selectedGenre, selectedYear, selectedSort, searchQuery]);
+
   // Function to fetch series from Firebase with pagination and filters
   const fetchSeriesFromFirebase = async (page: number, genre: string, year: string, sort: string, search: string) => {
-    console.log("fetchSeriesFromFirebase called with:", { page, genre, year, sort, search });
+    console.log("fetchSeriesFromFirebase called with params:", { page, genre, year, sort, search });
     setIsLoadingSeries(true);
     try {
       let seriesQuery = collection(db, "series");
@@ -281,10 +287,6 @@ export default function SeriesDisponiblePage() {
       setIsLoadingSeries(false);
     }
   };
-
-  useEffect(() => {
-    fetchSeriesFromFirebase(currentPage, selectedGenre, selectedYear, selectedSort, searchQuery);
-  }, [currentPage, selectedGenre, selectedYear, selectedSort, searchQuery]);
 
   const fetchAllSeries = async () => {
     setIsLoading(true);
@@ -401,13 +403,6 @@ export default function SeriesDisponiblePage() {
     return years;
   };
 
-  // Add this useEffect to handle initial year options
-  useEffect(() => {
-    const years = getYearOptions();
-    // Set initial year to current year
-    setSelectedYear(new Date().getFullYear().toString());
-  }, []);
-
   // Update the SeriesFilters component to handle genre changes
   const handleGenreChange = (genre: string) => {
     console.log("Genre changed to:", genre);
@@ -453,6 +448,7 @@ export default function SeriesDisponiblePage() {
           genres={genresList}
           onGenreChange={handleGenreChange}
           onYearChange={(year) => {
+            console.log("Year filter changed to:", year);
             setSelectedYear(year);
             setCurrentPage(1);
           }}
@@ -461,6 +457,7 @@ export default function SeriesDisponiblePage() {
             setCurrentPage(1);
           }}
           yearOptions={getYearOptions()}
+          selectedYear={selectedYear}
         />
 
         {isLoading && (
