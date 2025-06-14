@@ -72,6 +72,7 @@ export default function SeriesDisponiblePage() {
   // Function to fetch and store genres
   const fetchAndStoreGenres = async () => {
     try {
+      console.log("Attempting to fetch genres from TMDB...");
       const response = await fetch("https://api.themoviedb.org/3/genre/tv/list?language=en-US", {
         method: "GET",
         headers: {
@@ -82,6 +83,8 @@ export default function SeriesDisponiblePage() {
       });
       const data = await response.json();
       
+      console.log("Successfully fetched genres from TMDB:", data.genres);
+      
       // Create a batch write
       const batch = writeBatch(db);
       const genresCollection = collection(db, "genres");
@@ -91,19 +94,19 @@ export default function SeriesDisponiblePage() {
         const genreDoc = doc(genresCollection, genre.id.toString());
         batch.set(genreDoc, {
           id: genre.id,
-          name: genre.name,
+          name: genre.name ?? '', // Ensure name is always stored as a string
           last_updated: new Date().toISOString()
         });
       }
 
       // Commit the batch
       await batch.commit();
+      console.log("Genres successfully stored in Firebase.");
       
-      // Update local state
-      setGenresList(data.genres);
+      // No need to setGenresList here, as loadGenres will re-fetch after storing
       toast.success("Genres updated successfully!");
     } catch (error) {
-      console.error("Error fetching and storing genres:", error);
+      console.error("Error in fetchAndStoreGenres function:", error);
       toast.error("Failed to update genres");
     }
   };
@@ -112,30 +115,56 @@ export default function SeriesDisponiblePage() {
   useEffect(() => {
     const loadGenres = async () => {
       try {
+        console.log("Loading genres from Firebase...");
         const genresCollection = collection(db, "genres");
         const genresSnapshot = await getDocs(genresCollection);
         
         if (genresSnapshot.empty) {
+          console.log("No genres found in Firebase, attempting to fetch from TMDB and store...");
           // If no genres exist, fetch and store them
           await fetchAndStoreGenres();
-        } else {
-          // Load genres from Firebase
-          const genres = genresSnapshot.docs.map(doc => ({
-            id: doc.data().id,
-            name: doc.data().name
-          }));
+          // After storing, re-fetch to ensure the latest data is loaded
+          const updatedGenresSnapshot = await getDocs(genresCollection);
+          const genres = updatedGenresSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: data.id,
+              name: data.name ?? '' // Ensure name is always a string
+            };
+          });
           // Sort genres by name for better UX
-          genres.sort((a, b) => a.name.localeCompare(b.name));
+          genres.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+          console.log("Genres loaded after initial fetch and store:", genres);
+          setGenresList(genres);
+
+        } else {
+          console.log("Found genres in Firebase:", genresSnapshot.size);
+          // Load genres from Firebase
+          const genres = genresSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: data.id,
+              name: data.name ?? '' // Ensure name is always a string
+            };
+          });
+          // Sort genres by name for better UX
+          genres.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+          console.log("Loaded genres from Firebase:", genres);
           setGenresList(genres);
         }
       } catch (error) {
-        console.error("Error loading genres:", error);
+        console.error("Error in loadGenres function:", error);
         toast.error("Failed to load genres");
       }
     };
 
     loadGenres();
   }, []);
+
+  // Log genresList whenever it changes for debugging
+  useEffect(() => {
+    console.log("Current genresList state (after set):", genresList);
+  }, [genresList]);
 
   // Function to fetch series from Firebase with pagination and filters
   const fetchSeriesFromFirebase = async (page: number, genre: string, year: string, sort: string, search: string) => {
@@ -381,6 +410,7 @@ export default function SeriesDisponiblePage() {
 
   // Update the SeriesFilters component to handle genre changes
   const handleGenreChange = (genre: string) => {
+    console.log("Genre changed to:", genre);
     setSelectedGenre(genre);
     setCurrentPage(1); // Reset to first page when genre changes
   };

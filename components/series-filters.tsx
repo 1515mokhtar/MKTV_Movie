@@ -15,6 +15,8 @@ export function SeriesFilters({
   onSortChange,
   yearOptions,
 }: SeriesFiltersProps) {
+  console.log("SeriesFilters received genres:", genres);
+
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
       {/* Genre Filter */}
@@ -24,11 +26,19 @@ export function SeriesFilters({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Genres</SelectItem>
-          {genres.map((genre) => (
-            <SelectItem key={genre.id} value={genre.name}>
-              {genre.name}
+          {genres && genres.length > 0 ? (
+            genres
+              .filter(genre => genre.name && genre.name.trim() !== '')
+              .map((genre) => (
+                <SelectItem key={genre.id} value={genre.name}>
+                  {genre.name}
+                </SelectItem>
+              ))
+          ) : (
+            <SelectItem key="loading-genres" value="loading" disabled>
+              Loading genres...
             </SelectItem>
-          ))}
+          )}
         </SelectContent>
       </Select>
 
