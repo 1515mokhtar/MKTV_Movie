@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, doc, setDoc, getDoc, getDocs, query, orderBy, limit, startAfter, DocumentSnapshot, where } from "firebase/firestore";
+import { collection, doc, setDoc, getDoc, getDocs, query, orderBy, limit, startAfter, DocumentSnapshot, where, writeBatch } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
@@ -63,44 +63,100 @@ export default function SeriesDisponiblePage() {
   // New state for filters
   const [selectedGenre, setSelectedGenre] = useState<string>("all");
   const [selectedYear, setSelectedYear] = useState<string>("all");
-  const [selectedSort, setSelectedSort] = useState<string>("last_updated_desc"); // Default sort
+  const [selectedSort, setSelectedSort] = useState<string>("first_air_date_desc"); // Default sort by year
 
   const [genresList, setGenresList] = useState<{ id: number; name: string }[]>([]);
 
   const router = useRouter();
 
-  // Function to fetch genres from TMDB
-  useEffect(() => {
-    const fetchGenres = async () => {
-      try {
-        const response = await fetch("https://api.themoviedb.org/3/genre/tv/list?language=en-US", {
-          method: "GET",
-          headers: {
-            accept: "application/json",
-            Authorization:
-              "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0NzgxYWE1NWExYmYzYzZlZjA1ZWUwYmMwYTk0ZmNiYyIsIm5iZiI6MTczODcwNDY2Mi4wMDMsInN1YiI6IjY3YTI4NzE1N2M4NjA5NjAyOThhNjBmNiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.kGBXkjuBtqgKXEGMVRWJ88LUWg_lykPOyBZKoOIBmcc",
-          },
+  // Function to fetch and store genres
+  const fetchAndStoreGenres = async () => {
+    try {
+      const response = await fetch("https://api.themoviedb.org/3/genre/tv/list?language=en-US", {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+          Authorization:
+            "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0NzgxYWE1NWExYmYzYzZlZjA1ZWUwYmMwYTk0ZmNiYyIsIm5iZiI6MTczODcwNDY2Mi4wMDMsInN1YiI6IjY3YTI4NzE1N2M4NjA5NjAyOThhNjBmNiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.kGBXkjuBtqgKXEGMVRWJ88LUWg_lykPOyBZKoOIBmcc",
+        },
+      });
+      const data = await response.json();
+      
+      // Create a batch write
+      const batch = writeBatch(db);
+      const genresCollection = collection(db, "genres");
+
+      // Store each genre in Firebase
+      for (const genre of data.genres) {
+        const genreDoc = doc(genresCollection, genre.id.toString());
+        batch.set(genreDoc, {
+          id: genre.id,
+          name: genre.name,
+          last_updated: new Date().toISOString()
         });
-        const data = await response.json();
-        setGenresList(data.genres);
+      }
+
+      // Commit the batch
+      await batch.commit();
+      
+      // Update local state
+      setGenresList(data.genres);
+      toast.success("Genres updated successfully!");
+    } catch (error) {
+      console.error("Error fetching and storing genres:", error);
+      toast.error("Failed to update genres");
+    }
+  };
+
+  // Load genres from Firebase on component mount
+  useEffect(() => {
+    const loadGenres = async () => {
+      try {
+        const genresCollection = collection(db, "genres");
+        const genresSnapshot = await getDocs(genresCollection);
+        
+        if (genresSnapshot.empty) {
+          // If no genres exist, fetch and store them
+          await fetchAndStoreGenres();
+        } else {
+          // Load genres from Firebase
+          const genres = genresSnapshot.docs.map(doc => ({
+            id: doc.data().id,
+            name: doc.data().name
+          }));
+          // Sort genres by name for better UX
+          genres.sort((a, b) => a.name.localeCompare(b.name));
+          setGenresList(genres);
+        }
       } catch (error) {
-        console.error("Error fetching genres:", error);
+        console.error("Error loading genres:", error);
+        toast.error("Failed to load genres");
       }
     };
-    fetchGenres();
+
+    loadGenres();
   }, []);
 
   // Function to fetch series from Firebase with pagination and filters
   const fetchSeriesFromFirebase = async (page: number, genre: string, year: string, sort: string, search: string) => {
+    console.log("fetchSeriesFromFirebase called with:", { page, genre, year, sort, search });
     setIsLoadingSeries(true);
     try {
       let seriesQuery = collection(db, "series");
       let queryConstraints: any[] = [];
 
-      // Apply filters
+      // Apply genre filter
       if (genre !== "all") {
-        queryConstraints.push(where("genres", "array-contains", { name: genre, id: genresList.find(g => g.name === genre)?.id }));
+        // Find the genre object from our local genres list
+        const selectedGenre = genresList.find(g => g.name === genre);
+        if (selectedGenre) {
+          console.log("Applying genre filter for:", selectedGenre);
+          // Use array-contains to match series that have this genre
+          queryConstraints.push(where("genres", "array-contains", selectedGenre));
+        }
       }
+
+      // Apply year filter
       if (year !== "all") {
         console.log("Applying year filter for:", year);
         queryConstraints.push(where("first_air_date", ">=", `${year}-01-01`));
@@ -112,31 +168,31 @@ export default function SeriesDisponiblePage() {
         const searchLower = search.toLowerCase();
         queryConstraints.push(where("name_lowercase", ">=", searchLower));
         queryConstraints.push(where("name_lowercase", "<=", searchLower + "\uf8ff"));
-        // Note: For 'name_lowercase', you'd need to ensure series documents in Firebase
-        // have a 'name_lowercase' field populated with the lowercase version of the series name.
-        // If not, this search will not work as expected and might require client-side filtering
-        // or a different indexing strategy.
       }
+
+      console.log("Query Constraints after filters (before sorting/pagination):", queryConstraints);
 
       // Apply sorting
       switch (sort) {
         case "first_air_date_desc":
           queryConstraints.push(orderBy("first_air_date", "desc"));
           break;
+        case "first_air_date_asc":
+          queryConstraints.push(orderBy("first_air_date", "asc"));
+          break;
         case "vote_average_desc":
           queryConstraints.push(orderBy("vote_average", "desc"));
           break;
         case "popularity_desc":
-          queryConstraints.push(orderBy("popularity", "desc")); // Assuming you have a 'popularity' field
+          queryConstraints.push(orderBy("popularity", "desc"));
           break;
         case "name_asc":
           queryConstraints.push(orderBy("name", "asc"));
           break;
         default:
-          queryConstraints.push(orderBy("last_updated", "desc"));
+          queryConstraints.push(orderBy("first_air_date", "desc")); // Default sort by year descending
           break;
       }
-
 
       // Get total count first (without pagination limits)
       const totalSnapshot = await getDocs(query(seriesQuery, ...queryConstraints));
@@ -155,21 +211,35 @@ export default function SeriesDisponiblePage() {
 
       const q = query(seriesQuery, ...queryConstraints);
       console.log("Constructed Firebase Query:", q);
-      console.log("Query Constraints:", queryConstraints); // Log the query constraints
+      console.log("Query Constraints:", queryConstraints);
 
       const snapshot = await getDocs(q);
       const seriesData: FirebaseSeries[] = [];
 
       snapshot.forEach((doc) => {
+        const data = doc.data();
         seriesData.push({
           id: doc.id,
-          ...doc.data() as Omit<FirebaseSeries, 'id'>
+          name: data.name,
+          poster_path: data.poster_path,
+          vote_average: data.vote_average,
+          overview: data.overview,
+          backdrop_path: data.backdrop_path,
+          first_air_date: data.first_air_date,
+          genres: data.genres || [],
+          episode_run_time: data.episode_run_time || [],
+          number_of_seasons: data.number_of_seasons,
+          number_of_episodes: data.number_of_episodes,
+          vote_count: data.vote_count,
+          popularity: data.popularity,
+          name_lowercase: data.name_lowercase,
+          last_updated: data.last_updated
         });
       });
 
       setSeries(seriesData);
       setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
-    } catch (error: any) { // Type the error as 'any' for now to resolve linter errors
+    } catch (error: any) {
       console.error("Error fetching series:", error);
       console.error("Error details:", {
         name: error.name,
@@ -295,10 +365,24 @@ export default function SeriesDisponiblePage() {
   const getYearOptions = () => {
     const currentYear = new Date().getFullYear();
     const years = [];
-    for (let i = currentYear; i >= 1900; i--) { // Adjust range as needed
+    // Generate years from current year down to 1900
+    for (let i = currentYear; i >= 1900; i--) {
       years.push(i.toString());
     }
     return years;
+  };
+
+  // Add this useEffect to handle initial year options
+  useEffect(() => {
+    const years = getYearOptions();
+    // Set initial year to current year
+    setSelectedYear(new Date().getFullYear().toString());
+  }, []);
+
+  // Update the SeriesFilters component to handle genre changes
+  const handleGenreChange = (genre: string) => {
+    setSelectedGenre(genre);
+    setCurrentPage(1); // Reset to first page when genre changes
   };
 
   return (
@@ -337,9 +421,15 @@ export default function SeriesDisponiblePage() {
         {/* Series Filters */}
         <SeriesFilters
           genres={genresList}
-          onGenreChange={setSelectedGenre}
-          onYearChange={setSelectedYear}
-          onSortChange={setSelectedSort}
+          onGenreChange={handleGenreChange}
+          onYearChange={(year) => {
+            setSelectedYear(year);
+            setCurrentPage(1);
+          }}
+          onSortChange={(sort) => {
+            setSelectedSort(sort);
+            setCurrentPage(1);
+          }}
           yearOptions={getYearOptions()}
         />
 
@@ -363,6 +453,9 @@ export default function SeriesDisponiblePage() {
             {series.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <p className="text-lg font-medium">No series available</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {selectedYear !== "all" ? `No series found for year ${selectedYear}` : "Try adjusting your filters"}
+                </p>
               </div>
             ) : (
               <>
