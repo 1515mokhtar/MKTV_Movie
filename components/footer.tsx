@@ -15,17 +15,17 @@ export function Footer() {
           <h4 className="font-semibold mb-4">Quick Links</h4>
           <ul className="space-y-2 text-sm">
             <li>
-              <Link href="#" className="text-muted-foreground hover:text-foreground">
+              <Link href="/movies/disponible" className="text-muted-foreground hover:text-foreground">
                 Movies
               </Link>
             </li>
             <li>
-              <Link href="#" className="text-muted-foreground hover:text-foreground">
+              <Link href="/series/seriesdisponible" className="text-muted-foreground hover:text-foreground">
                 TV Series
               </Link>
             </li>
             <li>
-              <Link href="#" className="text-muted-foreground hover:text-foreground">
+              <Link href="/" className="text-muted-foreground hover:text-foreground">
                 New Releases
               </Link>
             </li>
@@ -35,17 +35,17 @@ export function Footer() {
           <h4 className="font-semibold mb-4">Support</h4>
           <ul className="space-y-2 text-sm">
             <li>
-              <Link href="#" className="text-muted-foreground hover:text-foreground">
+              <Link href="/support/help-center" className="text-muted-foreground hover:text-foreground">
                 Help Center
               </Link>
             </li>
             <li>
-              <Link href="#" className="text-muted-foreground hover:text-foreground">
+              <Link href="/support/terms-of-service" className="text-muted-foreground hover:text-foreground">
                 Terms of Service
               </Link>
             </li>
             <li>
-              <Link href="#" className="text-muted-foreground hover:text-foreground">
+              <Link href="/support/privacy-policy" className="text-muted-foreground hover:text-foreground">
                 Privacy Policy
               </Link>
             </li>

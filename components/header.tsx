@@ -301,54 +301,24 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
 
         <NavigationMenu className="hidden md:block">
           <NavigationMenuList>
-            {/* Movies Navigation Menu with Sub-list */}
             <NavigationMenuItem>
-              <NavigationMenuTrigger>Movies</NavigationMenuTrigger>
-              <NavigationMenuContent>
-                <ul className="flex flex-col gap-3 p-4">
-                   <li>
-                     <NavigationMenuLink asChild>
-                       <Link href="/movies" className="whitespace-nowrap">
-                         All Movies
-                       </Link>
-                     </NavigationMenuLink>
-                   </li>
-                   <li>
-                      <NavigationMenuLink asChild>
-                        <Link href="/movies/disponible" className="whitespace-nowrap">
-                          Movies disponible
-                        </Link>
-                      </NavigationMenuLink>
-                   </li>
-                  </ul>
-               </NavigationMenuContent>
-            </NavigationMenuItem>
-            {/* Series Navigation Menu with Sub-list */}
-            <NavigationMenuItem>
-              <NavigationMenuTrigger>Series</NavigationMenuTrigger>
-              <NavigationMenuContent>
-                 <ul className="flex flex-col gap-3 p-4">
-                  <li>
-                    <NavigationMenuLink asChild>
-                      <Link href="/series" className="whitespace-nowrap">
-                        All Series
-                      </Link>
-                    </NavigationMenuLink>
-                  </li>
-                  <li>
-                     <NavigationMenuLink asChild>
-                       <Link href="/series/seriesdisponible" className="whitespace-nowrap">
-                         Series Disponible
-                       </Link>
-                     </NavigationMenuLink>
-                  </li>
-                 </ul>
-              </NavigationMenuContent>
-            </NavigationMenuItem>
-            <NavigationMenuItem>
-              <Link href="/watchlist" legacyBehavior passHref>
+              <Link href="/movies/disponible" legacyBehavior passHref>
                 <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                  Watchlist
+                  Movies
+                </NavigationMenuLink>
+              </Link>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
+              <Link href="/series/seriesdisponible" legacyBehavior passHref>
+                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                  TV Series
+                </NavigationMenuLink>
+              </Link>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
+              <Link href="/" legacyBehavior passHref>
+                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                  Now Release
                 </NavigationMenuLink>
               </Link>
             </NavigationMenuItem>
