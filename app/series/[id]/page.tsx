@@ -46,7 +46,27 @@ async function getSeriesDetails(id: string, referer: string | null): Promise<Ser
     try {
       const firebaseDoc = await getDoc(seriesDocRef);
       if (firebaseDoc.exists()) {
-        seriesData = firebaseDoc.data() as SeriesDetailData;
+        const data = firebaseDoc.data();
+        seriesData = {
+          id: data.id,
+          name: data.name,
+          overview: data.overview,
+          backdrop_path: data.backdrop_path,
+          poster_path: data.poster_path,
+          first_air_date: data.first_air_date,
+          vote_average: data.vote_average,
+          popularity: data.popularity,
+          episode_run_time: data.episode_run_time || [],
+          genres: data.genres || [],
+          credits: data.credits,
+          similar: data.similar,
+          videos: data.videos,
+          episode_groups: data.episode_groups,
+          number_of_seasons: data.number_of_seasons,
+          number_of_episodes: data.number_of_episodes,
+          vote_count: data.vote_count,
+          seasons: data.seasons || [],
+        };
         console.log(`Using Firebase data for series ${id} (from /series/seriesdisponible)`);
       } else {
         console.log(`Series ${id} not found in Firebase (from /series/seriesdisponible).`);
@@ -97,16 +117,16 @@ async function getSeriesDetails(id: string, referer: string | null): Promise<Ser
       first_air_date: tmdbData.first_air_date,
       vote_average: tmdbData.vote_average,
       popularity: tmdbData.popularity,
-      episode_run_time: tmdbData.episode_run_time,
-      genres: tmdbData.genres,
+      episode_run_time: tmdbData.episode_run_time || [],
+      genres: tmdbData.genres || [],
       credits: tmdbData.credits,
       similar: tmdbData.similar,
       videos: tmdbData.videos,
-      episode_groups: episodeGroups,
+      episode_groups: episodeGroups || [],
       number_of_seasons: tmdbData.number_of_seasons,
       number_of_episodes: tmdbData.number_of_episodes,
       vote_count: tmdbData.vote_count,
-      seasons: tmdbData.seasons,
+      seasons: tmdbData.seasons || [],
     };
     console.log("TMDB Data for getSeriesDetails (Scenario 2):", tmdbData);
     console.log("SeriesData returned from TMDB only scenario:", seriesData);
@@ -118,10 +138,29 @@ async function getSeriesDetails(id: string, referer: string | null): Promise<Ser
   try {
     const firebaseDoc = await getDoc(seriesDocRef);
     if (firebaseDoc.exists()) {
-      const data = firebaseDoc.data() as SeriesDetailData;
+      const data = firebaseDoc.data();
       if (data.name && data.overview && data.poster_path && data.vote_average !== undefined && data.popularity !== undefined) {
         console.log(`Using cached Firebase data for series ${id} (hybrid mode)`);
-        seriesData = data;
+        seriesData = {
+          id: data.id,
+          name: data.name,
+          overview: data.overview,
+          backdrop_path: data.backdrop_path,
+          poster_path: data.poster_path,
+          first_air_date: data.first_air_date,
+          vote_average: data.vote_average,
+          popularity: data.popularity,
+          episode_run_time: data.episode_run_time || [],
+          genres: data.genres || [],
+          credits: data.credits,
+          similar: data.similar,
+          videos: data.videos,
+          episode_groups: data.episode_groups,
+          number_of_seasons: data.number_of_seasons,
+          number_of_episodes: data.number_of_episodes,
+          vote_count: data.vote_count,
+          seasons: data.seasons || [],
+        };
         fetchedFromFirebase = true;
       }
     }
@@ -165,16 +204,16 @@ async function getSeriesDetails(id: string, referer: string | null): Promise<Ser
       first_air_date: tmdbData.first_air_date,
       vote_average: tmdbData.vote_average,
       popularity: tmdbData.popularity,
-      episode_run_time: tmdbData.episode_run_time,
-      genres: tmdbData.genres,
+      episode_run_time: tmdbData.episode_run_time || [],
+      genres: tmdbData.genres || [],
       credits: tmdbData.credits,
       similar: tmdbData.similar,
       videos: tmdbData.videos,
-      episode_groups: episodeGroups,
+      episode_groups: episodeGroups || [],
       number_of_seasons: tmdbData.number_of_seasons,
       number_of_episodes: tmdbData.number_of_episodes,
       vote_count: tmdbData.vote_count,
-      seasons: tmdbData.seasons,
+      seasons: tmdbData.seasons || [],
     };
 
     console.log("TMDB Data for getSeriesDetails (Scenario 3 Fallback):", tmdbData);
@@ -220,6 +259,7 @@ async function getPartsList(id: string) {
 
 function SeriesInfo({ series }: { series: SeriesDetailData }) {
   console.log("Series data in SeriesInfo:", series);
+  console.log("Series genres in SeriesInfo (before map):", series.genres);
   return (
     <div className="grid gap-8 md:grid-cols-[2fr,3fr] lg:gap-12">
       <div className="relative aspect-[2/3] w-full max-w-md mx-auto md:mx-0">
@@ -234,7 +274,7 @@ function SeriesInfo({ series }: { series: SeriesDetailData }) {
       <div className="space-y-6">
         <h1 className="text-4xl font-bold tracking-tight lg:text-5xl">{series.name}</h1>
         <div className="flex flex-wrap gap-2">
-          {series.genres.map((genre) => (
+          {(series.genres ?? []).map((genre) => (
             <Badge key={genre.id} variant="secondary" className="px-3 py-1 text-sm">
               {genre.name}
             </Badge>

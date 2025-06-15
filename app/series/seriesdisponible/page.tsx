@@ -27,6 +27,32 @@ interface TmdbSeriesData {
   number_of_episodes: number;
   vote_count: number;
   popularity: number;
+  seasons: TmdbSeason[];
+  episode_groups: TmdbEpisodeGroupResult;
+}
+
+interface TmdbSeason {
+  id: number;
+  name: string;
+  overview: string;
+  air_date: string | null;
+  episode_count: number;
+  poster_path: string | null;
+  season_number: number;
+  vote_average: number;
+}
+
+interface TmdbEpisodeGroupResult {
+  results: TmdbEpisodeGroup[];
+}
+
+interface TmdbEpisodeGroup {
+  id: string;
+  name: string;
+  order: number;
+  type: number;
+  episode_count: number;
+  group_count: number;
 }
 
 interface FirebaseSeries {
@@ -45,6 +71,25 @@ interface FirebaseSeries {
   last_updated: string;
   popularity: number;
   name_lowercase: string;
+}
+
+interface FirebaseSeason {
+  id: number;
+  name: string;
+  overview: string;
+  air_date: string | null;
+  episode_count: number;
+  poster_path: string | null;
+  season_number: number;
+  vote_average: number;
+}
+
+interface FirebaseEpisodeGroup {
+  id: string;
+  name: string;
+  type: number;
+  episode_count: number;
+  group_count: number;
 }
 
 export default function SeriesDisponiblePage() {
@@ -186,8 +231,11 @@ export default function SeriesDisponiblePage() {
         const selectedGenre = genresList.find(g => g.name === genre);
         if (selectedGenre) {
           console.log("Applying genre filter for:", selectedGenre);
-          // Use array-contains to match series that have this genre
-          queryConstraints.push(where("genres", "array-contains", selectedGenre));
+          // Create a query to find series where genres array contains the selected genre
+          queryConstraints.push(where("genres", "array-contains", {
+            id: selectedGenre.id,
+            name: selectedGenre.name
+          }));
         }
       }
 
@@ -232,6 +280,7 @@ export default function SeriesDisponiblePage() {
       // Get total count first (without pagination limits)
       const totalSnapshot = await getDocs(query(seriesQuery, ...queryConstraints));
       const total = totalSnapshot.size;
+      console.log(`Total series found with current filters: ${total}`);
       setTotalPages(Math.ceil(total / ITEMS_PER_PAGE));
 
       // Apply pagination
@@ -253,6 +302,8 @@ export default function SeriesDisponiblePage() {
 
       snapshot.forEach((doc) => {
         const data = doc.data();
+        // Log the genres for debugging
+        console.log(`Series ${data.name} genres:`, data.genres);
         seriesData.push({
           id: doc.id,
           name: data.name,
@@ -274,6 +325,13 @@ export default function SeriesDisponiblePage() {
 
       setSeries(seriesData);
       setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+
+      // Log the results for debugging
+      console.log(`Retrieved ${seriesData.length} series for page ${page}`);
+      if (seriesData.length > 0) {
+        console.log("First series in results:", seriesData[0].name, "Genres:", seriesData[0].genres);
+        console.log("Last series in results:", seriesData[seriesData.length - 1].name, "Genres:", seriesData[seriesData.length - 1].genres);
+      }
     } catch (error: any) {
       console.error("Error fetching series:", error);
       console.error("Error details:", {
@@ -294,7 +352,27 @@ export default function SeriesDisponiblePage() {
     setProcessedSeries(0);
 
     try {
+      console.log("Starting series update process...");
+      
+      // Create a temporary document to track progress
+      const progressDocRef = doc(db, "progress", "series_update");
+      console.log("Creating progress document...");
+      
+      try {
+        await setDoc(progressDocRef, {
+          total: 0,
+          processed: 0,
+          status: "in_progress",
+          startTime: new Date().toISOString()
+        });
+        console.log("Progress document created successfully");
+      } catch (error) {
+        console.error("Error creating progress document:", error);
+        // Continue even if we can't create the progress document
+      }
+
       // First, get the total number of pages
+      console.log("Fetching initial data from TMDB...");
       const initialResponse = await fetch(
         "https://api.themoviedb.org/3/tv/popular?language=en-US&page=1",
         {
@@ -307,10 +385,34 @@ export default function SeriesDisponiblePage() {
       );
       const initialData = await initialResponse.json();
       const totalPages = initialData.total_pages;
-      setTotalSeries(initialData.total_results);
+      const totalSeries = initialData.total_results;
+      
+      console.log(`Total series to process: ${totalSeries}, Total pages: ${totalPages}`);
+      
+      // Update the progress document with total count
+      try {
+        await setDoc(progressDocRef, {
+          total: totalSeries,
+          processed: 0,
+          status: "in_progress",
+          startTime: new Date().toISOString()
+        });
+        console.log("Progress document updated with total count");
+      } catch (error) {
+        console.error("Error updating progress document with total:", error);
+        // Continue even if we can't update the progress document
+      }
+
+      setTotalSeries(totalSeries);
+      let processedCount = 0;
+      let lastProgressUpdate = 0; // Track last progress update count
+      let batch = writeBatch(db); // Create a batch for series updates
+      let batchCount = 0;
+      const BATCH_LIMIT = 500; // Firebase batch limit
 
       // Process each page
       for (let page = 1; page <= totalPages; page++) {
+        console.log(`Processing page ${page} of ${totalPages}`);
         const response = await fetch(
           `https://api.themoviedb.org/3/tv/popular?language=en-US&page=${page}`,
           {
@@ -325,57 +427,166 @@ export default function SeriesDisponiblePage() {
 
         // Process each series in the current page
         for (const series of data.results) {
-          // Check if series already exists in Firebase
-          const seriesDocRef = doc(db, "series", series.id.toString());
-          const seriesDoc = await getDoc(seriesDocRef);
+          console.log(`Processing series ${processedCount + 1} of ${totalSeries}: ${series.name}`);
+          
+          try {
+            // Check if series already exists in Firebase
+            const seriesDocRef = doc(db, "series", series.id.toString());
+            const seriesDoc = await getDoc(seriesDocRef);
 
-          if (!seriesDoc.exists()) {
-            // Fetch detailed series data
-            const detailsResponse = await fetch(
-              `https://api.themoviedb.org/3/tv/${series.id}?language=en-US`,
-              {
-                headers: {
-                  accept: "application/json",
-                  Authorization:
-                    "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0NzgxYWE1NWExYmYzYzZlZjA1ZWUwYmMwYTk0ZmNiYyIsIm5iZiI6MTczODcwNDY2Mi4wMDMsInN1YiI6IjY3YTI4NzE1N2M4NjA5NjAyOThhNjBmNiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.kGBXkjuBtqgKXEGMVRWJ88LUWg_lykPOyBZKoOIBmcc",
-                },
+            if (!seriesDoc.exists()) {
+              // Fetch detailed series data including seasons and episode groups
+              const detailsResponse = await fetch(
+                `https://api.themoviedb.org/3/tv/${series.id}?language=en-US&append_to_response=seasons,episode_groups`,
+                {
+                  headers: {
+                    accept: "application/json",
+                    Authorization:
+                      "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0NzgxYWE1NWExYmYzYzZlZjA1ZWUwYmMwYTk0ZmNiYyIsIm5iZiI6MTczODcwNDY2Mi4wMDMsInN1YiI6IjY3YTI4NzE1N2M4NjA5NjAyOThhNjBmNiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.kGBXkjuBtqgKXEGMVRWJ88LUWg_lykPOyBZKoOIBmcc",
+                  },
+                }
+              );
+              const seriesDetails: TmdbSeriesData = await detailsResponse.json();
+
+              // Add to batch
+              batch.set(seriesDocRef, {
+                name: seriesDetails.name,
+                poster_path: seriesDetails.poster_path,
+                vote_average: seriesDetails.vote_average,
+                overview: seriesDetails.overview,
+                backdrop_path: seriesDetails.backdrop_path,
+                first_air_date: seriesDetails.first_air_date,
+                genres: seriesDetails.genres,
+                episode_run_time: seriesDetails.episode_run_time,
+                number_of_seasons: seriesDetails.number_of_seasons,
+                number_of_episodes: seriesDetails.number_of_episodes,
+                vote_count: seriesDetails.vote_count,
+                popularity: seriesDetails.popularity,
+                name_lowercase: seriesDetails.name.toLowerCase(),
+                last_updated: new Date().toISOString(),
+              });
+              batchCount++;
+
+              // Store Seasons in a subcollection
+              if (seriesDetails.seasons && seriesDetails.seasons.length > 0) {
+                const seasonsCollectionRef = collection(seriesDocRef, "seasons");
+                for (const season of seriesDetails.seasons) {
+                  if (season.season_number > 0) {
+                    const seasonDocRef = doc(seasonsCollectionRef, season.season_number.toString());
+                    batch.set(seasonDocRef, {
+                      id: season.id,
+                      name: season.name,
+                      overview: season.overview,
+                      air_date: season.air_date,
+                      episode_count: season.episode_count,
+                      poster_path: season.poster_path,
+                      season_number: season.season_number,
+                      vote_average: season.vote_average,
+                    } as FirebaseSeason);
+                    batchCount++;
+                  }
+                }
               }
-            );
-            const seriesDetails: TmdbSeriesData = await detailsResponse.json();
 
-            // Save to Firebase
-            await setDoc(seriesDocRef, {
-              name: seriesDetails.name,
-              poster_path: seriesDetails.poster_path,
-              vote_average: seriesDetails.vote_average,
-              overview: seriesDetails.overview,
-              backdrop_path: seriesDetails.backdrop_path,
-              first_air_date: seriesDetails.first_air_date,
-              genres: seriesDetails.genres,
-              episode_run_time: seriesDetails.episode_run_time,
-              number_of_seasons: seriesDetails.number_of_seasons,
-              number_of_episodes: seriesDetails.number_of_episodes,
-              vote_count: seriesDetails.vote_count,
-              popularity: seriesDetails.popularity,
-              name_lowercase: seriesDetails.name.toLowerCase(),
-              last_updated: new Date().toISOString(),
-            });
-
-            // Add a small delay to avoid rate limiting
-            await new Promise(resolve => setTimeout(resolve, 250));
+              // Commit batch if it reaches the limit
+              if (batchCount >= BATCH_LIMIT) {
+                try {
+                  await batch.commit();
+                  console.log(`Committed batch of ${batchCount} operations`);
+                  batch = writeBatch(db);
+                  batchCount = 0;
+                } catch (error) {
+                  console.error("Error committing batch:", error);
+                  // Wait a bit before retrying
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+              }
+            }
+          } catch (error) {
+            console.error(`Error processing series ${series.id}:`, error);
+            // Continue with next series
+            continue;
           }
 
-          setProcessedSeries(prev => prev + 1);
-          setProgress((processedSeries / totalSeries) * 100);
+          processedCount++;
+          
+          // Update progress every 10 processed items
+          if (processedCount - lastProgressUpdate >= 10 || processedCount === totalSeries) {
+            try {
+              // Update Firebase progress document
+              await setDoc(progressDocRef, {
+                total: totalSeries,
+                processed: processedCount,
+                status: "in_progress",
+                startTime: new Date().toISOString()
+              });
+              
+              // Calculate progress percentage
+              const progressPercentage = Math.round((processedCount / totalSeries) * 100);
+              console.log(`Progress updated: ${processedCount}/${totalSeries} (${progressPercentage}%)`);
+              
+              // Update state
+              setProcessedSeries(processedCount);
+              setProgress(progressPercentage);
+              
+              lastProgressUpdate = processedCount;
+            } catch (error) {
+              console.error("Error updating progress document:", error);
+              // Continue even if we can't update the progress document
+            }
+          }
+          
+          // Add a small delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 250));
         }
+      }
+
+      // Commit any remaining batch operations
+      if (batchCount > 0) {
+        try {
+          await batch.commit();
+          console.log(`Committed final batch of ${batchCount} operations`);
+        } catch (error) {
+          console.error("Error committing final batch:", error);
+        }
+      }
+
+      // Final progress update to 100%
+      try {
+        await setDoc(progressDocRef, {
+          total: totalSeries,
+          processed: totalSeries,
+          status: "completed",
+          startTime: new Date().toISOString(),
+          endTime: new Date().toISOString()
+        });
+        
+        setProcessedSeries(totalSeries);
+        setProgress(100);
+        console.log("Progress completed: 100%");
+      } catch (error) {
+        console.error("Error marking progress as completed:", error);
       }
 
       toast.success("All series have been successfully processed and stored!");
       // Refresh the series list after fetching new data
       fetchSeriesFromFirebase(currentPage, selectedGenre, selectedYear, selectedSort, searchQuery);
     } catch (error) {
-      console.error("Error fetching and storing series:", error);
+      console.error("Error in fetchAllSeries:", error);
       toast.error("An error occurred while processing series");
+      
+      // Update progress document to error state
+      try {
+        const progressDocRef = doc(db, "progress", "series_update");
+        await setDoc(progressDocRef, {
+          status: "error",
+          error: error instanceof Error ? error.message : "Unknown error",
+          endTime: new Date().toISOString()
+        });
+        console.log("Progress document marked as error");
+      } catch (updateError) {
+        console.error("Error updating progress document with error state:", updateError);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -408,7 +619,18 @@ export default function SeriesDisponiblePage() {
     console.log("Genre changed to:", genre);
     setSelectedGenre(genre);
     setCurrentPage(1); // Reset to first page when genre changes
+    setLastVisible(null); // Reset lastVisible to ensure proper pagination
   };
+
+  // Add useEffect to log when genresList changes
+  useEffect(() => {
+    console.log("Current genresList:", genresList);
+  }, [genresList]);
+
+  // Add useEffect to log when selectedGenre changes
+  useEffect(() => {
+    console.log("Selected genre changed to:", selectedGenre);
+  }, [selectedGenre]);
 
   return (
     <div className="container mx-auto p-4">
@@ -418,7 +640,7 @@ export default function SeriesDisponiblePage() {
             Available Series
           </h1>
           <div className="flex flex-col gap-4 md:flex-row md:items-center">
-            <div className="relative w-full md:w-[300px]">
+            {/* <div className="relative w-full md:w-[300px]">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
@@ -432,14 +654,14 @@ export default function SeriesDisponiblePage() {
                 }}
                 className="pl-9"
               />
-            </div>
-            <Button 
+            </div> */}
+            {/* <Button 
               onClick={fetchAllSeries} 
               disabled={isLoading}
               className="w-full md:w-auto"
             >
               {isLoading ? "Processing..." : "Update Series Database"}
-            </Button>
+            </Button> */}
           </div>
         </div>
 
@@ -451,20 +673,36 @@ export default function SeriesDisponiblePage() {
             console.log("Year filter changed to:", year);
             setSelectedYear(year);
             setCurrentPage(1);
+            setLastVisible(null);
           }}
           onSortChange={(sort) => {
             setSelectedSort(sort);
             setCurrentPage(1);
+            setLastVisible(null);
           }}
           yearOptions={getYearOptions()}
           selectedYear={selectedYear}
         />
 
+        {/* Show current filter status */}
+        {selectedGenre !== "all" && (
+          <div className="text-sm text-muted-foreground">
+            Showing series in genre: <span className="font-medium">{selectedGenre}</span>
+            {series.length > 0 && (
+              <span className="ml-2">({series.length} series found)</span>
+            )}
+          </div>
+        )}
+
         {isLoading && (
           <div className="space-y-2">
-            <Progress value={progress} className="w-full" />
+            <Progress 
+              value={progress} 
+              className="w-full" 
+              indicatorClassName="bg-red-500" 
+            />
             <p className="text-sm text-muted-foreground">
-              Processed {processedSeries} of {totalSeries} series ({Math.round(progress)}%)
+              Processed {processedSeries} of {totalSeries} series ({progress}%)
             </p>
           </div>
         )}
