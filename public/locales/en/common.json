@@ -1,0 +1,92 @@
+{
+  "header": {
+    "movies": "Movies",
+    "tvSeries": "TV Series",
+    "nowRelease": "Now Release",
+    "searchPlaceholder": "Search movies & series...",
+    "allMovies": "All Movies",
+    "moviesDisponible": "Movies Available",
+    "allSeries": "All Series",
+    "seriesDisponible": "Series Available",
+    "watchlist": "Watchlist",
+    "profile": "Profile",
+    "watchHistory": "Watch History",
+    "recommendations": "Recommendations",
+    "settings": "Settings",
+    "logout": "Logout",
+    "login": "Log in",
+    "signup": "Sign up",
+    "language": "Language"
+  },
+  "footer": {
+    "quickLinks": "Quick Links",
+    "movies": "Movies",
+    "tvSeries": "TV Series",
+    "newReleases": "New Releases",
+    "support": "Support",
+    "helpCenter": "Help Center",
+    "termsOfService": "Terms of Service",
+    "privacyPolicy": "Privacy Policy",
+    "connectWithUs": "Connect With Us",
+    "copyright": "© {{year}} MKTV. All rights reserved."
+  },
+  "home": {
+    "welcomeTitle": "Welcome to MKTV",
+    "welcomeSubtitle": "Discover and watch your favorite movies in HD streaming.",
+    "noTrendingMovies": "No trending movies to display at the moment.",
+    "watchNowButton": "Watch Now",
+    "viewDetailsButton": "View Details",
+    "whyChooseTitle": "Why Choose MKTV?",
+    "whyChooseSubtitle": "Experience the best streaming platform with our premium features",
+    "feature1Title": "HD Quality",
+    "feature1Description": "Watch your favorite movies and shows in stunning HD quality",
+    "feature2Title": "Customizable",
+    "feature2Description": "Personalize your viewing experience with our advanced settings",
+    "feature3Title": "Secure",
+    "feature3Description": "Your data is protected with our advanced security measures",
+    "popularMoviesTitle": "Popular Movies",
+    "popularSeriesTitle": "Popular TV Series"
+  },
+  "moviesAvailable": {
+    "title": "Movies available",
+    "loading": "Loading...",
+    "errorLoadingMovies": "Error loading available movies (Firestore).",
+    "noMovies": "No movies available at the moment."
+  },
+  "supportPages": {
+    "helpCenter": {
+      "title": "Help Center",
+      "description": "Welcome to the Help Center. Here you can find answers to common questions and get support.",
+      "gettingStartedTitle": "Getting Started",
+      "gettingStartedContent": "Discover how to easily sign up, log in, and dive into your favorite movies and TV series. Our step-by-step guides will help you get set up in no time, ensuring a smooth start to your streaming journey.",
+      "troubleshootingTitle": "Troubleshooting Common Issues",
+      "troubleshootingContent": "Encountering a problem? Our troubleshooting section provides solutions for common issues like video playback errors, account access difficulties, and connectivity problems. Find quick fixes and tips to get back to watching without interruption.",
+      "contactSupportTitle": "Contact Support",
+      "contactSupportContent": "If you can't find the answer you're looking for, our dedicated support team is here to help. Reach out to us through our contact form for personalized assistance with any questions or concerns you may have."
+    },
+    "termsOfService": {
+      "title": "Terms of Service",
+      "description": "Please read these Terms of Service carefully before using our service. By accessing or using the Service, you agree to be bound by these Terms.",
+      "acceptanceTitle": "1. Acceptance of Terms",
+      "acceptanceContent": "By accessing or using the MKTV service (the \"Service\"), you signify that you have read, understood, and agree to be bound by these Terms of Service (\"Terms\"), whether or not you are a registered member of the Service. If you do not agree to these Terms, do not use the Service.",
+      "userConductTitle": "2. User Conduct",
+      "userConductContent": "You agree to use the Service only for lawful purposes and in a way that does not infringe the rights of, restrict, or inhibit anyone else's use and enjoyment of the Service. Prohibited behavior includes harassing or causing distress or inconvenience to any other user, transmitting obscene or offensive content, or disrupting the normal flow of dialogue within the Service.",
+      "intellectualPropertyTitle": "3. Intellectual Property",
+      "intellectualPropertyContent": "All content and materials available on the Service, including, but not limited to, text, graphics, website name, code, images, and logos are the intellectual property of MKTV or its licensors and are protected by applicable copyright and trademark law. Any inappropriate use, including but not limited to the reproduction, distribution, display, or transmission of any content on this site is strictly prohibited, unless specifically authorized by MKTV.",
+      "terminationTitle": "4. Termination",
+      "terminationContent": "We may terminate or suspend your access to the Service immediately, without prior notice or liability, for any reason whatsoever, including without limitation if you breach the Terms. Upon termination, your right to use the Service will immediately cease. If you wish to terminate your account, you may simply discontinue using the Service."
+    },
+    "privacyPolicy": {
+      "title": "Privacy Policy",
+      "description": "Your privacy is paramount to us. This Privacy Policy explains how we collect, use, and disclose information about you, and your rights in relation to that information.",
+      "informationCollectionTitle": "1. Information We Collect",
+      "informationCollectionContent": "We collect various types of information in connection with the services we provide, including personal information you provide directly to us (e.g., when you create an account, make a purchase, or contact customer support), and information collected automatically through your use of the Service (e.g., usage data, device information, and cookies).",
+      "howWeUseTitle": "2. How We Use Your Information",
+      "howWeUseContent": "We use the information we collect to provide, maintain, and improve our services, to develop new features, to personalize your experience, to communicate with you about your account and our services, and to detect, prevent, and address technical issues, fraud, or other illegal activities.",
+      "sharingInfoTitle": "3. Sharing Your Information",
+      "sharingInfoContent": "We may share your information with third parties in certain circumstances, such as with service providers who perform functions on our behalf, in connection with business transfers (e.g., mergers or acquisitions), to comply with legal obligations, or to protect our rights and property. We do not sell your personal information.",
+      "yourChoicesTitle": "4. Your Choices and Rights",
+      "yourChoicesContent": "You have certain choices regarding the information we collect and how it is used. This includes the ability to access, update, or delete your personal information, as well as to opt-out of certain data collection or marketing communications. You may also have additional rights depending on your jurisdiction, such as the right to data portability."
+    }
+  }
+} 

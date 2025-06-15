@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, doc, setDoc, getDoc, getDocs, query, orderBy, limit, startAfter, DocumentSnapshot, where, writeBatch } from "firebase/firestore";
+import { collection, doc, setDoc, getDoc, getDocs, query, orderBy, limit, startAfter, DocumentSnapshot, where, writeBatch, updateDoc, serverTimestamp, runTransaction, Timestamp, FieldValue } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
@@ -12,23 +12,27 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { SeriesFilters } from "@/components/series-filters";
+import { useDebounce } from "@/hooks/use-debounce";
+import { useTranslation } from "react-i18next";
 
 interface TmdbSeriesData {
   id: number;
   name: string;
-  poster_path: string;
-  vote_average: number;
-  overview: string;
-  backdrop_path: string;
+  poster_path?: string;
   first_air_date: string;
-  genres: { id: number; name: string }[];
-  episode_run_time: number[];
-  number_of_seasons: number;
-  number_of_episodes: number;
-  vote_count: number;
-  popularity: number;
-  seasons: TmdbSeason[];
-  episode_groups: TmdbEpisodeGroupResult;
+  overview: string;
+  genre_ids: number[];
+  vote_average?: number;
+  backdrop_path?: string;
+  number_of_seasons?: number;
+  number_of_episodes?: number;
+  status?: string;
+  episode_run_time?: number[];
+  popularity?: number;
+  vote_count?: number;
+  last_air_date?: string;
+  seasons?: TmdbSeason[];
+  episode_groups?: TmdbEpisodeGroupResult;
 }
 
 interface TmdbSeason {
@@ -55,22 +59,14 @@ interface TmdbEpisodeGroup {
   group_count: number;
 }
 
-interface FirebaseSeries {
-  id: string;
-  name: string;
-  poster_path: string;
-  vote_average: number;
-  overview: string;
-  backdrop_path: string;
-  first_air_date: string;
+interface FirebaseSeries extends TmdbSeriesData {
+  firebaseId: string;
+  name_lowercase?: string;
+  last_updated?: Timestamp | FieldValue;
   genres: { id: number; name: string }[];
-  episode_run_time: number[];
-  number_of_seasons: number;
-  number_of_episodes: number;
-  vote_count: number;
-  last_updated: string;
-  popularity: number;
-  name_lowercase: string;
+  seasons?: TmdbSeason[];
+  episode_groups?: TmdbEpisodeGroupResult;
+  status?: string;
 }
 
 interface FirebaseSeason {
@@ -101,17 +97,19 @@ export default function SeriesDisponiblePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoadingSeries, setIsLoadingSeries] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [lastVisible, setLastVisible] = useState<DocumentSnapshot | null>(null);
   const ITEMS_PER_PAGE = 20;
 
   // New state for filters
-  const [selectedGenre, setSelectedGenre] = useState<string>("all");
-  const [selectedYear, setSelectedYear] = useState<string>("all");
-  const [selectedSort, setSelectedSort] = useState<string>("first_air_date_desc"); // Default sort by year
+  const [selectedGenre, setSelectedGenre] = useState<string>('all'); // State to hold selected genre ID (as string)
+  const [selectedYear, setSelectedYear] = useState<string>('all'); // State to hold selected year
+  const [selectedSort, setSelectedSort] = useState<string>('first_air_date_desc'); // State to hold selected sort option
 
   const [genresList, setGenresList] = useState<{ id: number; name: string }[]>([]);
 
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  const { t } = useTranslation('common');
   const router = useRouter();
 
   // Function to fetch and store genres
@@ -120,7 +118,7 @@ export default function SeriesDisponiblePage() {
       console.log("Attempting to fetch genres from TMDB...");
       const response = await fetch("https://api.themoviedb.org/3/genre/tv/list?language=en-US", {
         method: "GET",
-        headers: {
+    headers: {
           accept: "application/json",
           Authorization:
             "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0NzgxYWE1NWExYmYzYzZlZjA1ZWUwYmMwYTk0ZmNiYyIsIm5iZiI6MTczODcwNDY2Mi4wMDMsInN1YiI6IjY3YTI4NzE1N2M4NjA5NjAyOThhNjBmNiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.kGBXkjuBtqgKXEGMVRWJ88LUWg_lykPOyBZKoOIBmcc",
@@ -226,17 +224,9 @@ export default function SeriesDisponiblePage() {
       let queryConstraints: any[] = [];
 
       // Apply genre filter
-      if (genre !== "all") {
-        // Find the genre object from our local genres list
-        const selectedGenre = genresList.find(g => g.name === genre);
-        if (selectedGenre) {
-          console.log("Applying genre filter for:", selectedGenre);
-          // Create a query to find series where genres array contains the selected genre
-          queryConstraints.push(where("genres", "array-contains", {
-            id: selectedGenre.id,
-            name: selectedGenre.name
-          }));
-        }
+      if (genre && genre !== 'all') {
+        queryConstraints.push(where("genre_ids", "array-contains", parseInt(genre))); // Use genre ID
+        console.log(`Filtering by genre ID: ${genre}`);
       }
 
       // Apply year filter
@@ -305,7 +295,7 @@ export default function SeriesDisponiblePage() {
         // Log the genres for debugging
         console.log(`Series ${data.name} genres:`, data.genres);
         seriesData.push({
-          id: doc.id,
+          id: data.id,
           name: data.name,
           poster_path: data.poster_path,
           vote_average: data.vote_average,
@@ -313,13 +303,18 @@ export default function SeriesDisponiblePage() {
           backdrop_path: data.backdrop_path,
           first_air_date: data.first_air_date,
           genres: data.genres || [],
+          genre_ids: data.genre_ids || [],
           episode_run_time: data.episode_run_time || [],
           number_of_seasons: data.number_of_seasons,
           number_of_episodes: data.number_of_episodes,
           vote_count: data.vote_count,
           popularity: data.popularity,
           name_lowercase: data.name_lowercase,
-          last_updated: data.last_updated
+          last_updated: data.last_updated,
+          status: data.status,
+          seasons: data.seasons || [],
+          firebaseId: doc.id,
+          episode_groups: data.episode_groups,
         });
       });
 
@@ -449,22 +444,33 @@ export default function SeriesDisponiblePage() {
               const seriesDetails: TmdbSeriesData = await detailsResponse.json();
 
               // Add to batch
-              batch.set(seriesDocRef, {
+              const seriesData: FirebaseSeries = {
+                id: seriesDetails.id,
                 name: seriesDetails.name,
                 poster_path: seriesDetails.poster_path,
-                vote_average: seriesDetails.vote_average,
-                overview: seriesDetails.overview,
-                backdrop_path: seriesDetails.backdrop_path,
                 first_air_date: seriesDetails.first_air_date,
-                genres: seriesDetails.genres,
-                episode_run_time: seriesDetails.episode_run_time,
+                overview: seriesDetails.overview,
+                genre_ids: seriesDetails.genre_ids || [],
+                vote_average: seriesDetails.vote_average,
+                backdrop_path: seriesDetails.backdrop_path,
                 number_of_seasons: seriesDetails.number_of_seasons,
                 number_of_episodes: seriesDetails.number_of_episodes,
-                vote_count: seriesDetails.vote_count,
+                status: seriesDetails.status,
+                episode_run_time: seriesDetails.episode_run_time,
                 popularity: seriesDetails.popularity,
+                vote_count: seriesDetails.vote_count,
+                last_air_date: seriesDetails.last_air_date,
+                genres: (seriesDetails.genre_ids || []).map(id => ({
+                  id,
+                  name: genresList.find(g => g.id === id)?.name || 'Unknown',
+                })),
+                seasons: seriesDetails.seasons || [],
+                episode_groups: seriesDetails.episode_groups,
+                firebaseId: seriesDetails.id.toString(),
                 name_lowercase: seriesDetails.name.toLowerCase(),
-                last_updated: new Date().toISOString(),
-              });
+                last_updated: serverTimestamp(),
+              };
+              batch.set(seriesDocRef, seriesData);
               batchCount++;
 
               // Store Seasons in a subcollection
@@ -728,11 +734,12 @@ export default function SeriesDisponiblePage() {
                   {series.map((item) => (
                     <SeriesCard
                       key={item.id}
-                      id={parseInt(item.id)}
+                      id={item.id}
                       title={item.name}
+                      poster={item.poster_path || "/placeholder.svg"}
                       genre={item.genres.map(g => g.name).join(", ")}
-                      releaseDate={item.first_air_date ? new Date(item.first_air_date).getFullYear().toString() : "N/A"}
-                      poster={item.poster_path ? `https://image.tmdb.org/t/p/w300${item.poster_path}` : "/placeholder.svg"}
+                      releaseDate={item.first_air_date}
+                      rating={item.vote_average}
                     />
                   ))}
                 </div>

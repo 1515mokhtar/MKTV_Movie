@@ -30,6 +30,7 @@ import { addDoc, collection, doc, serverTimestamp, updateDoc } from "firebase/fi
 import { signOut } from "firebase/auth"
 import { auth, db } from "@/lib/firebase"
 import Image from "next/image"
+import { useTranslation } from 'react-i18next';
 
 interface SearchResult {
   popularity: number
@@ -57,6 +58,7 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
   const authContext = useAuth();
   const user = authContext?.user;
   const authLoading = authContext?.loading;
+  const { t, i18n } = useTranslation('common');
 
   
   // For double-click detection
@@ -230,7 +232,7 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
             <Input
               ref={searchInputRef}
               type="search"
-              placeholder="Search movies & series..."
+              placeholder={t('header.searchPlaceholder')}
               className="w-full rounded-lg px-4 py-3 text-base text-lg md:text-base h-12 md:h-10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -246,180 +248,240 @@ export function Header({ onSearch, initialSearchResults }: HeaderProps) {
               size="icon"
               variant="ghost"
               disabled={isLoading}
-              className="rounded-lg h-12 w-12 md:h-10 md:w-10"
               onClick={handleSearchButtonClick}
+              className="absolute right-0 top-1/2 -translate-y-1/2 md:relative md:top-auto md:translate-y-0 text-muted-foreground"
             >
-              <Search className="h-6 w-6" />
+              <Search className="h-5 w-5" />
             </Button>
           </form>
 
-          {/* Search Results Dropdown */}
-          {isSearchFocused && searchQuery.length > 0 && (searchResults.length > 0 || isLoading || error) && (
-            <div className="absolute top-full left-0 right-0 bg-background border border-border rounded-lg shadow-lg mt-2 z-10 max-h-[400px] overflow-y-auto">
-              {isLoading && <div className="p-4 text-center text-muted-foreground">Loading...</div>}
-              {error && <div className="p-4 text-center text-destructive">Error: {error}</div>}
-              {!isLoading && !error && searchResults.length === 0 && (
-                 <div className="p-4 text-center text-muted-foreground">No results found.</div>
-              )}
-              {!isLoading && !error && searchResults.length > 0 && (
-                <ul className="divide-y divide-border">
-                  {searchResults.map((result) => (
-                    <li key={result.id} className="p-2 hover:bg-muted cursor-pointer" onClick={() => handleResultClick(result)}>
-                      <div className="flex items-center gap-2">
-                        {result.poster_path ? (
-                           <Image
-                             src={`https://image.tmdb.org/t/p/w92${result.poster_path}`}
-                             alt={result.title || result.name || "No title"}
-                             width={32}
-                             height={48}
-                             className="rounded object-cover"
-                           />
-                        ) : (
-                           <div className="w-8 h-12 bg-muted-foreground rounded flex items-center justify-center text-xs text-background">No Img</div>
-                        )}
-                        <div>
-                           <p className="font-semibold text-sm line-clamp-1">{result.title || result.name}</p>
-                           {result.media_type && (
-                             <p className="text-xs text-muted-foreground">{result.media_type === 'movie' ? 'Movie' : 'Series'}</p>
-                           )}
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-               {!isLoading && !error && (searchQuery.length < 5 || forceShowResults) && searchResults.length > 0 && (
-                <div className="p-2 border-t border-border">
-                   <Link href={`/search-results?query=${encodeURIComponent(searchQuery)}`} className="text-sm text-mktv-accent hover:underline text-center block">
-                      See all results
-                   </Link>
-                </div>
-               )}
+          {isSearchFocused && searchQuery.length > 0 && searchResults.length > 0 && (
+            <div className="absolute left-0 right-0 top-full mt-2 rounded-md border bg-popover text-popover-foreground shadow-md z-10 max-h-[400px] overflow-y-auto">
+              <div className="grid gap-2 p-2">
+                {searchResults.map((result) => (
+                  <Button
+                    key={result.id}
+                    variant="ghost"
+                    className="flex items-center justify-start gap-3 p-2 h-auto text-left"
+                    onClick={() => handleResultClick(result)}
+                  >
+                    <Image
+                      src={result.poster_path ? `https://image.tmdb.org/t/p/w92${result.poster_path}` : "/placeholder.svg"}
+                      alt={result.title || result.name || "Poster"}
+                      width={40}
+                      height={60}
+                      className="rounded-sm flex-shrink-0"
+                    />
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sm">
+                        {result.title || result.name} ({result.media_type === "movie" ? t('header.allMovies') : t('header.allSeries')})
+                      </span>
+                      {result.popularity !== undefined && (
+                        <span className="text-xs text-muted-foreground">
+                          Popularity: {result.popularity.toFixed(1)}
+                        </span>
+                      )}
+                    </div>
+                  </Button>
+                ))}
+              </div>
+              <div className="p-2 border-t">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-center"
+                  onClick={() => {
+                    router.push(`/search-results?query=${encodeURIComponent(searchQuery)}`)
+                    setIsSearchFocused(false)
+                  }}
+                >
+                  {t('header.searchPlaceholder')}
+                </Button>
+              </div>
             </div>
           )}
         </div>
 
-        <NavigationMenu className="hidden md:block">
-          <NavigationMenuList>
-            <NavigationMenuItem>
-              <Link href="/movies/disponible" legacyBehavior passHref>
-                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                  Movies
-                </NavigationMenuLink>
-              </Link>
-            </NavigationMenuItem>
-            <NavigationMenuItem>
-              <Link href="/series/seriesdisponible" legacyBehavior passHref>
-                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                  TV Series
-                </NavigationMenuLink>
-              </Link>
-            </NavigationMenuItem>
-            <NavigationMenuItem>
-              <Link href="/" legacyBehavior passHref>
-                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                  Now Release
-                </NavigationMenuLink>
-              </Link>
-            </NavigationMenuItem>
-          </NavigationMenuList>
-        </NavigationMenu>
+        <nav className="hidden lg:flex items-center space-x-4">
+          <NavigationMenu>
+            <NavigationMenuList>
+              <NavigationMenuItem>
+                <Link href="/movies/disponible" legacyBehavior passHref>
+                  <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                    {t('header.movies')}
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+              <NavigationMenuItem>
+                <Link href="/series/seriesdisponible" legacyBehavior passHref>
+                  <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                    {t('header.tvSeries')}
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+              <NavigationMenuItem>
+                <Link href="/" legacyBehavior passHref>
+                  <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                    {t('header.nowRelease')}
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+            </NavigationMenuList>
+          </NavigationMenu>
+        </nav>
 
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="md:hidden">
-              <Menu className="h-5 w-5" />
-              <span className="sr-only">Toggle menu</span>
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-            <nav className="flex flex-col gap-4">
-              <Link href="/movies" className="text-lg font-semibold whitespace-nowrap">
-                All movies
-              </Link>
-              <Link href="/movies/disponible" className="text-lg font-semibold whitespace-nowrap">
-                Movies disponible
-              </Link>
-              <Link href="/series" className="text-lg font-semibold">
-                Series
-              </Link>
-              <Link href="/series/seriesdisponible" className="text-lg font-semibold">
-                Series Disponible
-              </Link>
-              <Link href="/watchlist" className="text-lg font-semibold">
-                Watchlist
-              </Link>
+        <div className="flex items-center gap-2 ml-auto">
+          {authLoading ? (
+            <div className="w-8 h-8 rounded-full bg-muted animate-pulse"></div>
+          ) : (
+            <>
+              {/* Profile dropdown for authenticated users */}
               {user ? (
-                <>
-                  <Link href="/profile" className="text-lg font-semibold">
-                    Profile
-                  </Link>
-                  <Link href="/history" className="text-lg font-semibold">
-                    Watch History
-                  </Link>
-                  <Link href="/recommendations" className="text-lg font-semibold">
-                    Recommendations
-                  </Link>
-                  <Link href="/settings" className="text-lg font-semibold">
-                    Settings
-                  </Link>
-                  <Button onClick={handleLogout} variant="ghost" className="justify-start px-0">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Log out
-                  </Button>
-                </>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="rounded-full">
+                      <User className="h-5 w-5" />
+                      <span className="sr-only">{t('header.profile')}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile" className="cursor-pointer">
+                        {t('header.profile')}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/watchlist" className="cursor-pointer">
+                        {t('header.watchlist')}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/watch-history" className="cursor-pointer">
+                        {t('header.watchHistory')}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/recommendations" className="cursor-pointer">
+                        {t('header.recommendations')}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/settings" className="cursor-pointer">
+                        {t('header.settings')}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>{t('header.logout')}</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : (
-                <>
-                  <Link href="/login" className="text-lg font-semibold">
-                    Log in
-                  </Link>
-                  <Link href="/signup" className="text-lg font-semibold">
-                    Sign up
-                  </Link>
-                </>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/login">{t('header.login')}</Link>
+                </Button>
               )}
-            </nav>
-          </SheetContent>
-        </Sheet>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="ml-auto md:ml-0">
-              <User className="h-5 w-5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            {user ? (
-              <>
-                <DropdownMenuItem className="hover:bg-primary">
-                  <Link className="w-full" href="/profile">
-                    Profile
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Link className="w-full" href="/settings">
-                    Settings
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>Log out</DropdownMenuItem>
-              </>
-            ) : (
-              <>
-                <DropdownMenuItem>
-                  <Link className="w-full" href="/login">
-                    Log in
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Link className="w-full" href="/signup">
-                    Sign up
-                  </Link>
-                </DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              {/* Language Switcher for Desktop */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    {i18n.language.toUpperCase()}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => i18n.changeLanguage('en')}>English</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => i18n.changeLanguage('fr')}>Français</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => i18n.changeLanguage('ar')}>العربية</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          )}
+
+          {/* Mobile menu */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="lg:hidden">
+                <Menu className="h-6 w-6" />
+                <span className="sr-only">Toggle menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right">
+              <nav className="grid gap-6 text-lg font-medium pt-8">
+                <Link
+                  href="/movies/disponible"
+                  className="flex items-center gap-2 text-lg font-semibold"
+                >
+                  <Film className="h-5 w-5" />
+                  {t('header.moviesDisponible')}
+                </Link>
+                <Link
+                  href="/series/seriesdisponible"
+                  className="flex items-center gap-2 text-lg font-semibold"
+                >
+                  <Tv className="h-5 w-5" />
+                  {t('header.seriesDisponible')}
+                </Link>
+                <Link
+                  href="/"
+                  className="flex items-center gap-2 text-lg font-semibold"
+                >
+                  {t('header.nowRelease')}
+                </Link>
+                {user && (
+                  <>
+                    <Link href="/watchlist" className="flex items-center gap-2 text-lg font-semibold">
+                      {t('header.watchlist')}
+                    </Link>
+                    <Link href="/profile" className="flex items-center gap-2 text-lg font-semibold">
+                      {t('header.profile')}
+                    </Link>
+                    <Link href="/watch-history" className="flex items-center gap-2 text-lg font-semibold">
+                      {t('header.watchHistory')}
+                    </Link>
+                    <Link href="/recommendations" className="flex items-center gap-2 text-lg font-semibold">
+                      {t('header.recommendations')}
+                    </Link>
+                    <Link href="/settings" className="flex items-center gap-2 text-lg font-semibold">
+                      {t('header.settings')}
+                    </Link>
+                    <Button
+                      onClick={handleLogout}
+                      className="flex items-center gap-2 text-lg font-semibold justify-start p-0"
+                      variant="ghost"
+                    >
+                      <LogOut className="h-5 w-5" />
+                      <span>{t('header.logout')}</span>
+                    </Button>
+                  </>
+                )}
+                {!user && (
+                  <>
+                    <Link href="/login" className="flex items-center gap-2 text-lg font-semibold">
+                      {t('header.login')}
+                    </Link>
+                    <Link href="/signup" className="flex items-center gap-2 text-lg font-semibold">
+                      {t('header.signup')}
+                    </Link>
+                  </>
+                )}
+                {/* Language Switcher for Mobile */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="w-full justify-start">
+                      {t('header.language')}: {i18n.language.toUpperCase()}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => i18n.changeLanguage('en')}>English</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => i18n.changeLanguage('fr')}>Français</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => i18n.changeLanguage('ar')}>العربية</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </nav>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
     </header>
   )

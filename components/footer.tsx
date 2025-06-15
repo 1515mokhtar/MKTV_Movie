@@ -1,7 +1,11 @@
+'use client'
+
 import { Facebook, Instagram, Twitter } from "lucide-react"
 import Link from "next/link"
+import { useTranslation } from 'react-i18next';
 
 export function Footer() {
+  const { t } = useTranslation('common');
   return (
     <footer className="w-full border-t bg-card">
       <div className="container grid gap-8 py-8 md:grid-cols-2 lg:grid-cols-4">
@@ -12,47 +16,47 @@ export function Footer() {
           </p>
         </div>
         <div>
-          <h4 className="font-semibold mb-4">Quick Links</h4>
+          <h4 className="font-semibold mb-4">{t('footer.quickLinks')}</h4>
           <ul className="space-y-2 text-sm">
             <li>
               <Link href="/movies/disponible" className="text-muted-foreground hover:text-foreground">
-                Movies
+                {t('footer.movies')}
               </Link>
             </li>
             <li>
               <Link href="/series/seriesdisponible" className="text-muted-foreground hover:text-foreground">
-                TV Series
+                {t('footer.tvSeries')}
               </Link>
             </li>
             <li>
               <Link href="/" className="text-muted-foreground hover:text-foreground">
-                New Releases
+                {t('footer.newReleases')}
               </Link>
             </li>
           </ul>
         </div>
         <div>
-          <h4 className="font-semibold mb-4">Support</h4>
+          <h4 className="font-semibold mb-4">{t('footer.support')}</h4>
           <ul className="space-y-2 text-sm">
             <li>
               <Link href="/support/help-center" className="text-muted-foreground hover:text-foreground">
-                Help Center
+                {t('footer.helpCenter')}
               </Link>
             </li>
             <li>
               <Link href="/support/terms-of-service" className="text-muted-foreground hover:text-foreground">
-                Terms of Service
+                {t('footer.termsOfService')}
               </Link>
             </li>
             <li>
               <Link href="/support/privacy-policy" className="text-muted-foreground hover:text-foreground">
-                Privacy Policy
+                {t('footer.privacyPolicy')}
               </Link>
             </li>
           </ul>
         </div>
         <div>
-          <h4 className="font-semibold mb-4">Connect With Us</h4>
+          <h4 className="font-semibold mb-4">{t('footer.connectWithUs')}</h4>
           <div className="flex gap-4">
             <Link href="#" className="text-muted-foreground hover:text-foreground">
               <Facebook className="h-5 w-5" />
@@ -68,7 +72,7 @@ export function Footer() {
       </div>
       <div className="border-t">
         <div className="container py-4 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} MKTV. All rights reserved.
+          {t('footer.copyright', { year: new Date().getFullYear() })}
         </div>
       </div>
     </footer>

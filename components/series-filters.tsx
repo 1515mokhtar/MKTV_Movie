@@ -1,4 +1,5 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useTranslation } from 'react-i18next';
 
 interface SeriesFiltersProps {
   genres: { id: number; name: string }[]
@@ -7,6 +8,8 @@ interface SeriesFiltersProps {
   onSortChange: (sort: string) => void
   yearOptions: string[]
   selectedYear: string
+  selectedGenre: string
+  selectedSort: string
 }
 
 export function SeriesFilters({
@@ -16,29 +19,32 @@ export function SeriesFilters({
   onSortChange,
   yearOptions,
   selectedYear,
+  selectedGenre,
+  selectedSort,
 }: SeriesFiltersProps) {
+  const { t } = useTranslation('common');
   console.log("SeriesFilters received genres:", genres);
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
       {/* Genre Filter */}
-      <Select onValueChange={onGenreChange} defaultValue="all">
+      <Select onValueChange={onGenreChange} value={selectedGenre ?? 'all'}>
         <SelectTrigger className="w-full sm:w-[180px]">
-          <SelectValue placeholder="Select Genre" />
+          <SelectValue placeholder={t('filters.selectGenrePlaceholder')} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Genres</SelectItem>
+          <SelectItem value="all">{t('filters.allGenres')}</SelectItem>
           {genres && genres.length > 0 ? (
             genres
               .filter(genre => genre.name && genre.name.trim() !== '')
               .map((genre) => (
-                <SelectItem key={genre.id} value={genre.name}>
-                  {genre.name}
+                <SelectItem key={genre.id} value={genre.id.toString()}>
+                  {t(`genres.${genre.name.toLowerCase().replace(/ /g, '')}`)}
                 </SelectItem>
               ))
           ) : (
             <SelectItem key="loading-genres" value="loading" disabled>
-              Loading genres...
+              {t('filters.loadingGenres')}
             </SelectItem>
           )}
         </SelectContent>
@@ -47,10 +53,10 @@ export function SeriesFilters({
       {/* Year Filter */}
       <Select onValueChange={onYearChange} value={selectedYear}>
         <SelectTrigger className="w-full sm:w-[180px]">
-          <SelectValue placeholder="Select Year" />
+          <SelectValue placeholder={t('filters.selectYearPlaceholder')} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Years</SelectItem>
+          <SelectItem value="all">{t('filters.allYears')}</SelectItem>
           {yearOptions.map((year) => (
             <SelectItem key={year} value={year}>
               {year}
@@ -60,16 +66,16 @@ export function SeriesFilters({
       </Select>
 
       {/* Sort Filter */}
-      <Select onValueChange={onSortChange} defaultValue="first_air_date_desc">
+      <Select onValueChange={onSortChange} value={selectedSort}>
         <SelectTrigger className="w-full sm:w-[180px]">
-          <SelectValue placeholder="Sort By" />
+          <SelectValue placeholder={t('filters.sortByPlaceholder')} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="first_air_date_desc">Newest First</SelectItem>
-          <SelectItem value="first_air_date_asc">Oldest First</SelectItem>
-          <SelectItem value="vote_average_desc">Highest Rated</SelectItem>
-          <SelectItem value="popularity_desc">Most Popular</SelectItem>
-          <SelectItem value="name_asc">Name (A-Z)</SelectItem>
+          <SelectItem value="first_air_date_desc">{t('filters.newestFirst')}</SelectItem>
+          <SelectItem value="first_air_date_asc">{t('filters.oldestFirst')}</SelectItem>
+          <SelectItem value="vote_average_desc">{t('filters.highestRated')}</SelectItem>
+          <SelectItem value="popularity_desc">{t('filters.mostPopular')}</SelectItem>
+          <SelectItem value="name_asc">{t('filters.nameAsc')}</SelectItem>
         </SelectContent>
       </Select>
     </div>

@@ -6,6 +6,15 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { AuthProvider } from './contexts/AuthContext'
 import type React from "react"
+import { cn } from "@/lib/utils"
+import { Toaster } from "@/components/ui/sonner"
+import dynamic from 'next/dynamic'
+
+// Dynamically import I18nProvider with ssr: false
+const DynamicI18nProvider = dynamic(() => import('@/app/i18n-provider').then(mod => mod.I18nProvider), {
+  ssr: false,
+  loading: () => null, // Optional: A loading component or null
+})
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -31,18 +40,24 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <link rel="icon" href="/iconMKTV3.ico" type="image/x-icon" />
-      <body className={`${inter.className} min-h-screen bg-gradient-to-b from-background via-background/95 to-background/90`}>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+      <body className={cn(
+        "min-h-screen bg-background font-sans antialiased",
+        inter.variable,
+      )}>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <AuthProvider>
-            <div className="relative min-h-screen">
-              <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]" />
-              <div className="relative">
-                <Header />
-                <main>{children}</main>
-                <Footer />
+            <DynamicI18nProvider>
+              <div className="relative min-h-screen">
+                <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]" />
+                <div className="relative">
+                  <Header />
+                  <main>{children}</main>
+                  <Footer />
+                </div>
               </div>
-            </div>
+            </DynamicI18nProvider>
           </AuthProvider>
+          <Toaster position="bottom-right" />
         </ThemeProvider>
       </body>
     </html>

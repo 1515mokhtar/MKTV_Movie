@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { PopularMoviesGrid } from "@/components/popular-movies-grid"
 import { PopularSeriesGrid } from "@/components/popular-series-grid"
+import { useTranslation } from 'react-i18next';
 
 interface Movie {
   id: number
@@ -22,6 +23,7 @@ export default function Home() {
   const router = useRouter()
   const [trendingMovies, setTrendingMovies] = useState<Movie[]>([])
   const [loading, setLoading] = useState(true)
+  const { t } = useTranslation('common');
 
   useEffect(() => {
     const fetchTrendingMovies = async () => {
@@ -56,9 +58,9 @@ export default function Home() {
             </div>
           ) : trendingMovies.length === 0 ? (
             <div className="flex flex-col items-center justify-center w-full px-4 py-12 sm:py-20">
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 drop-shadow-lg">Bienvenue sur MKTV</h2>
-              <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-2 max-w-2xl mx-auto">Découvrez et regardez vos films préférés en streaming HD.</p>
-              <p className="text-sm sm:text-base text-muted-foreground">Aucun film tendance à afficher pour le moment.</p>
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 drop-shadow-lg">{t('home.welcomeTitle')}</h2>
+              <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-2 max-w-2xl mx-auto">{t('home.welcomeSubtitle')}</p>
+              <p className="text-sm sm:text-base text-muted-foreground">{t('home.noTrendingMovies')}</p>
             </div>
           ) : (
             <Carousel
@@ -93,7 +95,7 @@ export default function Home() {
                                 className="bg-primary hover:bg-primary/90"
                                 onClick={() => router.push(`/watch/${movie.id}`)}
                               >
-                                Watch Now
+                                {t('home.watchNowButton')}
                               </Button>
                               <Button
                                 size="lg"
@@ -101,7 +103,7 @@ export default function Home() {
                                 className="bg-white/10 hover:bg-white/20 text-white border-white/20"
                                 onClick={() => router.push(`/movies/${movie.id}`)}
                               >
-                                View Details
+                                {t('home.viewDetailsButton')}
                               </Button>
                             </div>
                           </div>
@@ -125,9 +127,9 @@ export default function Home() {
             <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5" />
             <div className="container relative z-10">
               <div className="text-center mb-12">
-                <h2 className="text-4xl font-bold mb-4">Why Choose MKTV?</h2>
+                <h2 className="text-4xl font-bold mb-4">{t('home.whyChooseTitle')}</h2>
                 <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                  Experience the best streaming platform with our premium features
+                  {t('home.whyChooseSubtitle')}
                 </p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -147,9 +149,9 @@ export default function Home() {
                       />
                     </svg>
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">HD Quality</h3>
+                  <h3 className="text-xl font-semibold mb-2">{t('home.feature1Title')}</h3>
                   <p className="text-muted-foreground">
-                    Watch your favorite movies and shows in stunning HD quality
+                    {t('home.feature1Description')}
                   </p>
                 </div>
                 <div className="bg-background/50 backdrop-blur-sm p-6 rounded-lg border border-border">
@@ -168,9 +170,9 @@ export default function Home() {
                       />
                     </svg>
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">Customizable</h3>
+                  <h3 className="text-xl font-semibold mb-2">{t('home.feature2Title')}</h3>
                   <p className="text-muted-foreground">
-                    Personalize your viewing experience with our advanced settings
+                    {t('home.feature2Description')}
                   </p>
                 </div>
                 <div className="bg-background/50 backdrop-blur-sm p-6 rounded-lg border border-border">
@@ -189,29 +191,27 @@ export default function Home() {
                       />
                     </svg>
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">Secure</h3>
+                  <h3 className="text-xl font-semibold mb-2">{t('home.feature3Title')}</h3>
                   <p className="text-muted-foreground">
-                    Your data is protected with our advanced security measures
+                    {t('home.feature3Description')}
                   </p>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* Trending Now Section */}
-          <section>
-            <h2 className="text-2xl font-bold mb-4">Trending Now</h2>
-            <MovieCarousel />
-          </section>
+          {/* Category Tabs */}
+          <CategoryTabs />
 
-          {/* Popular Movies Section */}
-          <section>
-            <h2 className="text-2xl font-bold mb-4">Popular Movies</h2>
+          {/* Popular Movies Grid */}
+          <section className="mt-12">
+            <h2 className="text-3xl font-bold mb-6">{t('home.popularMoviesTitle')}</h2>
             <PopularMoviesGrid />
           </section>
-          {/* Popular Series Section */}
-          <section>
-            <h2 className="text-2xl font-bold mb-4">Popular Series</h2>
+
+          {/* Popular Series Grid */}
+          <section className="mt-12">
+            <h2 className="text-3xl font-bold mb-6">{t('home.popularSeriesTitle')}</h2>
             <PopularSeriesGrid />
           </section>
         </div>

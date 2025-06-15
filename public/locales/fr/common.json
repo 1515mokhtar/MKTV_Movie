@@ -1,0 +1,92 @@
+{
+  "header": {
+    "movies": "Films",
+    "tvSeries": "Séries TV",
+    "nowRelease": "Nouveautés",
+    "searchPlaceholder": "Rechercher films & séries...",
+    "allMovies": "Tous les films",
+    "moviesDisponible": "Films disponibles",
+    "allSeries": "Toutes les séries",
+    "seriesDisponible": "Séries disponibles",
+    "watchlist": "Liste de surveillance",
+    "profile": "Profil",
+    "watchHistory": "Historique de visionnage",
+    "recommendations": "Recommandations",
+    "settings": "Paramètres",
+    "logout": "Déconnexion",
+    "login": "Connexion",
+    "signup": "Inscription",
+    "language": "Langue"
+  },
+  "footer": {
+    "quickLinks": "Liens rapides",
+    "movies": "Films",
+    "tvSeries": "Séries TV",
+    "newReleases": "Nouveautés",
+    "support": "Support",
+    "helpCenter": "Centre d'aide",
+    "termsOfService": "Conditions d'utilisation",
+    "privacyPolicy": "Politique de confidentialité",
+    "connectWithUs": "Connectez-vous avec nous",
+    "copyright": "© {{year}} MKTV. Tous droits réservés."
+  },
+  "home": {
+    "welcomeTitle": "Bienvenue sur MKTV",
+    "welcomeSubtitle": "Découvrez et regardez vos films préférés en streaming HD.",
+    "noTrendingMovies": "Aucun film tendance à afficher pour le moment.",
+    "watchNowButton": "Regarder maintenant",
+    "viewDetailsButton": "Voir les détails",
+    "whyChooseTitle": "Pourquoi choisir MKTV ?",
+    "whyChooseSubtitle": "Découvrez la meilleure plateforme de streaming avec nos fonctionnalités premium",
+    "feature1Title": "Qualité HD",
+    "feature1Description": "Regardez vos films et émissions préférés en superbe qualité HD",
+    "feature2Title": "Personnalisable",
+    "feature2Description": "Personnalisez votre expérience de visionnage avec nos paramètres avancés",
+    "feature3Title": "Sécurisé",
+    "feature3Description": "Vos données sont protégées grâce à nos mesures de sécurité avancées",
+    "popularMoviesTitle": "Films Populaires",
+    "popularSeriesTitle": "Séries TV Populaires"
+  },
+  "moviesAvailable": {
+    "title": "Films disponibles",
+    "loading": "Chargement...",
+    "errorLoadingMovies": "Erreur lors du chargement des films disponibles (Firestore).",
+    "noMovies": "Aucun film disponible pour le moment."
+  },
+  "supportPages": {
+    "helpCenter": {
+      "title": "Centre d'aide",
+      "description": "Bienvenue au Centre d'aide. Ici, vous trouverez des réponses aux questions fréquentes et obtiendrez de l'aide.",
+      "gettingStartedTitle": "Démarrage",
+      "gettingStartedContent": "Découvrez comment vous inscrire, vous connecter et plonger facilement dans vos films et séries TV préférés. Nos guides étape par étape vous aideront à vous lancer en un rien de temps, assurant un début en douceur à votre parcours de streaming.",
+      "troubleshootingTitle": "Dépannage des problèmes courants",
+      "troubleshootingContent": "Vous rencontrez un problème ? Notre section de dépannage fournit des solutions aux problèmes courants tels que les erreurs de lecture vidéo, les difficultés d'accès au compte et les problèmes de connectivité. Trouvez des solutions rapides et des astuces pour reprendre le visionnage sans interruption.",
+      "contactSupportTitle": "Contacter le support",
+      "contactSupportContent": "Si vous ne trouvez pas la réponse que vous cherchez, notre équipe de support dédiée est là pour vous aider. Contactez-nous via notre formulaire de contact pour une assistance personnalisée concernant toutes vos questions ou préoccupations."
+    },
+    "termsOfService": {
+      "title": "Conditions d'utilisation",
+      "description": "Veuillez lire attentivement les présentes Conditions d'utilisation avant d'utiliser notre service. En accédant ou en utilisant le Service, vous acceptez d'être lié par les présentes Conditions.",
+      "acceptanceTitle": "1. Acceptation des conditions",
+      "acceptanceContent": "En accédant ou en utilisant le service MKTV (le \"Service\"), vous signifiez que vous avez lu, compris et accepté d'être lié par les présentes Conditions d'utilisation (les \"Conditions\"), que vous soyez ou non un membre enregistré du Service. Si vous n'acceptez pas ces Conditions, n'utilisez pas le Service.",
+      "userConductTitle": "2. Conduite de l'utilisateur",
+      "userConductContent": "Vous acceptez d'utiliser le Service uniquement à des fins légales et d'une manière qui ne porte pas atteinte aux droits d'autrui, ne restreint pas ou n'inhibe pas l'utilisation et la jouissance du Service par quiconque. Les comportements interdits incluent le harcèlement ou le fait de causer de la détresse ou des inconvénients à tout autre utilisateur, la transmission de contenu obscène ou offensant, ou la perturbation du déroulement normal du dialogue au sein du Service.",
+      "intellectualPropertyTitle": "3. Propriété intellectuelle",
+      "intellectualPropertyContent": "Tout le contenu et les matériaux disponibles sur le Service, y compris, mais sans s'y limiter, le texte, les graphiques, le nom du site web, le code, les images et les logos sont la propriété intellectuelle de MKTV ou de ses concédants de licence et sont protégés par les lois applicables sur le droit d'auteur et les marques de commerce. Toute utilisation inappropriée, y compris, mais sans s'y limiter, la reproduction, la distribution, l'affichage ou la transmission de tout contenu sur ce site est strictement interdite, sauf autorisation spécifique de MKTV.",
+      "terminationTitle": "4. Résiliation",
+      "terminationContent": "Nous pouvons résilier ou suspendre votre accès au Service immédiatement, sans préavis ni responsabilité, pour quelque raison que ce soit, y compris, sans limitation, si vous violez les Conditions. Dès la résiliation, votre droit d'utiliser le Service cessera immédiatement. Si vous souhaitez résilier votre compte, vous pouvez simplement cesser d'utiliser le Service."
+    },
+    "privacyPolicy": {
+      "title": "Politique de confidentialité",
+      "description": "Votre vie privée est primordiale pour nous. Cette Politique de confidentialité explique comment nous recueillons, utilisons et divulguons les informations vous concernant, ainsi que vos droits relatifs à ces informations.",
+      "informationCollectionTitle": "1. Informations que nous recueillons",
+      "informationCollectionContent": "Nous recueillons divers types d'informations en lien avec les services que nous fournissons, y compris les informations personnelles que vous nous fournissez directement (par exemple, lorsque vous créez un compte, effectuez un achat ou contactez le support client), et les informations recueillies automatiquement via votre utilisation du Service (par exemple, les données d'utilisation, les informations sur l'appareil et les cookies).",
+      "howWeUseTitle": "2. Comment nous utilisons vos informations",
+      "howWeUseContent": "Nous utilisons les informations que nous recueillons pour fournir, maintenir et améliorer nos services, pour développer de nouvelles fonctionnalités, pour personnaliser votre expérience, pour communiquer avec vous concernant votre compte et nos services, et pour détecter, prévenir et traiter les problèmes techniques, la fraude ou d'autres activités illégales.",
+      "sharingInfoTitle": "3. Partage de vos informations",
+      "sharingInfoContent": "Nous pouvons partager vos informations avec des tiers dans certaines circonstances, telles qu'avec des fournisseurs de services qui exécutent des fonctions en notre nom, en lien avec des transferts d'entreprise (par exemple, fusions ou acquisitions), pour nous conformer à des obligations légales, ou pour protéger nos droits et nos biens. Nous ne vendons pas vos informations personnelles.",
+      "yourChoicesTitle": "4. Vos choix et vos droits",
+      "yourChoicesContent": "Vous avez certains choix concernant les informations que nous recueillons et la manière dont elles sont utilisées. Cela inclut la possibilité d'accéder, de mettre à jour ou de supprimer vos informations personnelles, ainsi que de refuser certaines collectes de données ou communications marketing. Vous pouvez également avoir des droits supplémentaires en fonction de votre juridiction, tels que le droit à la portabilité des données."
+    }
+  }
+} 
