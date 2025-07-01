@@ -12,15 +12,16 @@ interface MovieCardProps {
   category?: string // Optional category name
   rating?: number // Optional rating for the movie
   overview?: string; // Add overview prop
+  href?: string // Optional custom link
 }
 
-export function MovieCard({ id, title, genre, releaseDate, poster, category, rating }: MovieCardProps) {
+export function MovieCard({ id, title, genre, releaseDate, poster, category, rating, href }: MovieCardProps) {
   // Extract year from releaseDate
   const year = releaseDate && releaseDate !== 'Unknown' ? releaseDate.split("-")[0] : "";
 
   return (
     <Card className="group relative overflow-hidden bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50 transition-all duration-300 hover:shadow-lg">
-      <Link href={`/movies/${id}`} className="block focus:outline-none focus:ring-2 focus:ring-primary rounded-lg h-full">
+      <Link href={href || `/movies/${id}`} className="block focus:outline-none focus:ring-2 focus:ring-primary rounded-lg h-full">
         <div className="relative aspect-[2/3] overflow-hidden rounded-t-lg">
           <Image
             src={poster || "/placeholder.svg"}

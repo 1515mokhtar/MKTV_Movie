@@ -21,6 +21,7 @@ interface CarouselContentProps {
 interface CarouselItemProps {
   children: React.ReactNode
   className?: string
+  [key: string]: any // Accept any additional props
 }
 
 export function Carousel({ children, opts = {}, className = "" }: CarouselProps) {
@@ -111,8 +112,8 @@ export function CarouselContent({ children, className = "" }: CarouselContentPro
   return <div className={`flex ${className}`}>{children}</div>
 }
 
-export function CarouselItem({ children, className = "" }: CarouselItemProps) {
-  return <div className={`flex-shrink-0 w-full ${className}`}>{children}</div>
+export function CarouselItem({ children, className = "", ...props }: CarouselItemProps) {
+  return <div className={`flex-shrink-0 w-full ${className}`} {...props}>{children}</div>
 }
 
 export function CarouselDots() {

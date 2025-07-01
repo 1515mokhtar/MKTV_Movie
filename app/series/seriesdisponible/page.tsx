@@ -107,23 +107,26 @@ export default function SeriesDisponiblePage() {
   const [selectedSort, setSelectedSort] = useState<string>('first_air_date_desc'); // State to hold selected sort option
 
   const [genresList, setGenresList] = useState<{ id: number; name: string }[]>([]);
+  const [debugSeries, setDebugSeries] = useState<any[]>([]);
 
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const router = useRouter();
+  const currentLang = i18n.language;
 
   // Function to fetch and store genres
   const fetchAndStoreGenres = async () => {
     try {
       console.log("Attempting to fetch genres from TMDB...");
-      const response = await fetch("https://api.themoviedb.org/3/genre/tv/list?language=en-US", {
-        method: "GET",
-    headers: {
-          accept: "application/json",
-          Authorization:
-            "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0NzgxYWE1NWExYmYzYzZlZjA1ZWUwYmMwYTk0ZmNiYyIsIm5iZiI6MTczODcwNDY2Mi4wMDMsInN1YiI6IjY3YTI4NzE1N2M4NjA5NjAyOThhNjBmNiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.kGBXkjuBtqgKXEGMVRWJ88LUWg_lykPOyBZKoOIBmcc",
-        },
-      });
+      const response = await fetch(`https://api.themoviedb.org/3/genre/tv/list?language=${currentLang}`,
+        {
+          method: "GET",
+          headers: {
+            accept: "application/json",
+            Authorization:
+              "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0NzgxYWE1NWExYmYzYzZlZjA1ZWUwYmMwYTk0ZmNiYyIsIm5iZiI6MTczODcwNDY2Mi4wMDMsInN1YiI6IjY3YTI4NzE1N2M4NjA5NjAyOThhNjBmNiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.kGBXkjuBtqgKXEGMVRWJ88LUWg_lykPOyBZKoOIBmcc",
+          },
+        });
       const data = await response.json();
       
       console.log("Successfully fetched genres from TMDB:", data.genres);
@@ -154,7 +157,7 @@ export default function SeriesDisponiblePage() {
     }
   };
 
-  // Load genres from Firebase on component mount
+  // Load genres from Firebase on component mount and when language changes
   useEffect(() => {
     const loadGenres = async () => {
       try {
@@ -202,6 +205,30 @@ export default function SeriesDisponiblePage() {
     };
 
     loadGenres();
+  }, [i18n.language]);
+
+  // Load some debug series to see what's in the database
+  useEffect(() => {
+    const loadDebugSeries = async () => {
+      try {
+        const seriesQuery = collection(db, "series");
+        const debugSnapshot = await getDocs(query(seriesQuery, limit(5)));
+        const debugData = debugSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            name: data.name,
+            genre_ids: data.genre_ids || [],
+            genres: data.genres || []
+          };
+        });
+        setDebugSeries(debugData);
+        console.log("Debug series loaded:", debugData);
+      } catch (error) {
+        console.error("Error loading debug series:", error);
+      }
+    };
+    
+    loadDebugSeries();
   }, []);
 
   // Log genresList whenever it changes for debugging
@@ -211,7 +238,7 @@ export default function SeriesDisponiblePage() {
 
   // Refetch series when filters or page change
   useEffect(() => {
-    console.log("Triggering fetchSeriesFromFirebase with states:", { currentPage, selectedGenre, selectedYear, selectedSort, searchQuery });
+    // Always fetch from first page if filters change
     fetchSeriesFromFirebase(currentPage, selectedGenre, selectedYear, selectedSort, searchQuery);
   }, [currentPage, selectedGenre, selectedYear, selectedSort, searchQuery]);
 
@@ -223,10 +250,16 @@ export default function SeriesDisponiblePage() {
       let seriesQuery = collection(db, "series");
       let queryConstraints: any[] = [];
 
-      // Apply genre filter
+      // Apply genre filter - use a different approach to avoid composite index issues
       if (genre && genre !== 'all') {
-        queryConstraints.push(where("genre_ids", "array-contains", parseInt(genre))); // Use genre ID
-        console.log(`Filtering by genre ID: ${genre}`);
+        const genreId = parseInt(genre);
+        if (!isNaN(genreId)) {
+          // Use array-contains-any for better compatibility
+          queryConstraints.push(where("genre_ids", "array-contains-any", [genreId]));
+          console.log(`Filtering by genre ID: ${genreId}`);
+        } else {
+          console.error(`Invalid genre ID: ${genre}`);
+        }
       }
 
       // Apply year filter
@@ -245,27 +278,116 @@ export default function SeriesDisponiblePage() {
 
       console.log("Query Constraints after filters (before sorting/pagination):", queryConstraints);
 
-      // Apply sorting
+      // Apply sorting - only use simple sorting to avoid composite index issues
+      let sortField = "first_air_date";
+      let sortDirection: "desc" | "asc" = "desc";
+      
       switch (sort) {
         case "first_air_date_desc":
-          queryConstraints.push(orderBy("first_air_date", "desc"));
+          sortField = "first_air_date";
+          sortDirection = "desc";
           break;
         case "first_air_date_asc":
-          queryConstraints.push(orderBy("first_air_date", "asc"));
+          sortField = "first_air_date";
+          sortDirection = "asc";
           break;
         case "vote_average_desc":
-          queryConstraints.push(orderBy("vote_average", "desc"));
+          sortField = "vote_average";
+          sortDirection = "desc";
           break;
         case "popularity_desc":
-          queryConstraints.push(orderBy("popularity", "desc"));
+          sortField = "popularity";
+          sortDirection = "desc";
           break;
         case "name_asc":
-          queryConstraints.push(orderBy("name", "asc"));
+          sortField = "name";
+          sortDirection = "asc";
           break;
         default:
-          queryConstraints.push(orderBy("first_air_date", "desc")); // Default sort by year descending
+          sortField = "first_air_date";
+          sortDirection = "desc";
           break;
       }
+
+      // If we have genre filter, try without sorting first to avoid composite index issues
+      if (genre && genre !== 'all') {
+        try {
+          console.log("Attempting query with genre filter but without sorting...");
+          // Reset query constraints for genre-only query
+          const genreConstraints = [];
+          const genreId = parseInt(genre);
+          if (!isNaN(genreId)) {
+            genreConstraints.push(where("genre_ids", "array-contains-any", [genreId]));
+            console.log(`Genre filter: looking for genre_id ${genreId}`);
+          }
+          
+          const genreQuery = query(seriesQuery, ...genreConstraints, limit(100)); // Get more items to sort in memory
+          const genreSnapshot = await getDocs(genreQuery);
+          const genreData: FirebaseSeries[] = [];
+          
+          console.log(`Genre query returned ${genreSnapshot.size} documents`);
+          
+          genreSnapshot.forEach((doc) => {
+            const data = doc.data();
+            console.log(`Series ${data.name} has genre_ids:`, data.genre_ids);
+            genreData.push({
+              id: data.id,
+              name: data.name,
+              poster_path: data.poster_path,
+              vote_average: data.vote_average,
+              overview: data.overview,
+              backdrop_path: data.backdrop_path,
+              first_air_date: data.first_air_date,
+              genres: data.genres || [],
+              genre_ids: data.genre_ids || [],
+              episode_run_time: data.episode_run_time || [],
+              number_of_seasons: data.number_of_seasons,
+              number_of_episodes: data.number_of_episodes,
+              vote_count: data.vote_count,
+              popularity: data.popularity,
+              name_lowercase: data.name_lowercase,
+              last_updated: data.last_updated,
+              status: data.status,
+              seasons: data.seasons || [],
+              firebaseId: doc.id,
+              episode_groups: data.episode_groups,
+            });
+          });
+
+          // Sort in memory
+          genreData.sort((a, b) => {
+            switch (sort) {
+              case "first_air_date_desc":
+                return new Date(b.first_air_date).getTime() - new Date(a.first_air_date).getTime();
+              case "first_air_date_asc":
+                return new Date(a.first_air_date).getTime() - new Date(b.first_air_date).getTime();
+              case "vote_average_desc":
+                return (b.vote_average || 0) - (a.vote_average || 0);
+              case "popularity_desc":
+                return (b.popularity || 0) - (a.popularity || 0);
+              case "name_asc":
+                return a.name.localeCompare(b.name);
+              default:
+                return new Date(b.first_air_date).getTime() - new Date(a.first_air_date).getTime();
+            }
+          });
+
+          // Apply pagination
+          const startIndex = (page - 1) * ITEMS_PER_PAGE;
+          const endIndex = startIndex + ITEMS_PER_PAGE;
+          const paginatedData = genreData.slice(startIndex, endIndex);
+
+          setSeries(paginatedData);
+          setTotalPages(Math.ceil(genreData.length / ITEMS_PER_PAGE));
+          console.log(`Retrieved ${paginatedData.length} series for page ${page} (genre filtered)`);
+          return;
+        } catch (genreError) {
+          console.error("Genre filter query failed, falling back to simple query:", genreError);
+        }
+      }
+
+      // Fallback to simple query without complex filters
+      queryConstraints.push(orderBy(sortField, sortDirection));
 
       // Get total count first (without pagination limits)
       const totalSnapshot = await getDocs(query(seriesQuery, ...queryConstraints));
@@ -335,7 +457,49 @@ export default function SeriesDisponiblePage() {
         code: error.code,
         stack: error.stack
       });
-      toast.error("Failed to load series");
+      
+      // Try to fetch without filters as fallback
+      try {
+        console.log("Attempting to fetch series without filters as fallback...");
+        const fallbackQuery = query(seriesQuery, orderBy("first_air_date", "desc"), limit(ITEMS_PER_PAGE));
+        const fallbackSnapshot = await getDocs(fallbackQuery);
+        const fallbackData: FirebaseSeries[] = [];
+        
+        fallbackSnapshot.forEach((doc) => {
+          const data = doc.data();
+          fallbackData.push({
+            id: data.id,
+            name: data.name,
+            poster_path: data.poster_path,
+            vote_average: data.vote_average,
+            overview: data.overview,
+            backdrop_path: data.backdrop_path,
+            first_air_date: data.first_air_date,
+            genres: data.genres || [],
+            genre_ids: data.genre_ids || [],
+            episode_run_time: data.episode_run_time || [],
+            number_of_seasons: data.number_of_seasons,
+            number_of_episodes: data.number_of_episodes,
+            vote_count: data.vote_count,
+            popularity: data.popularity,
+            name_lowercase: data.name_lowercase,
+            last_updated: data.last_updated,
+            status: data.status,
+            seasons: data.seasons || [],
+            firebaseId: doc.id,
+            episode_groups: data.episode_groups,
+          });
+        });
+        
+        setSeries(fallbackData);
+        setTotalPages(Math.ceil(fallbackSnapshot.size / ITEMS_PER_PAGE));
+        setLastVisible(fallbackSnapshot.docs[fallbackSnapshot.docs.length - 1]);
+        console.log(`Fallback successful: Retrieved ${fallbackData.length} series`);
+        toast.error("Filters could not be applied, showing all series");
+      } catch (fallbackError) {
+        console.error("Fallback fetch also failed:", fallbackError);
+        toast.error("Failed to load series");
+      }
     } finally {
       setIsLoadingSeries(false);
     }
@@ -444,13 +608,14 @@ export default function SeriesDisponiblePage() {
               const seriesDetails: TmdbSeriesData = await detailsResponse.json();
 
               // Add to batch
+              const genreIds = (seriesDetails.genres || []).map(g => g.id);
               const seriesData: FirebaseSeries = {
                 id: seriesDetails.id,
                 name: seriesDetails.name,
                 poster_path: seriesDetails.poster_path,
                 first_air_date: seriesDetails.first_air_date,
                 overview: seriesDetails.overview,
-                genre_ids: seriesDetails.genre_ids || [],
+                genre_ids: genreIds,
                 vote_average: seriesDetails.vote_average,
                 backdrop_path: seriesDetails.backdrop_path,
                 number_of_seasons: seriesDetails.number_of_seasons,
@@ -460,9 +625,9 @@ export default function SeriesDisponiblePage() {
                 popularity: seriesDetails.popularity,
                 vote_count: seriesDetails.vote_count,
                 last_air_date: seriesDetails.last_air_date,
-                genres: (seriesDetails.genre_ids || []).map(id => ({
-                  id,
-                  name: genresList.find(g => g.id === id)?.name || 'Unknown',
+                genres: (seriesDetails.genres || []).map(g => ({
+                  id: g.id,
+                  name: g.name || genresList.find(gg => gg.id === g.id)?.name || 'Unknown',
                 })),
                 seasons: seriesDetails.seasons || [],
                 episode_groups: seriesDetails.episode_groups,
@@ -628,6 +793,13 @@ export default function SeriesDisponiblePage() {
     setLastVisible(null); // Reset lastVisible to ensure proper pagination
   };
 
+  const handleYearChange = (year: string) => {
+    console.log("Year filter changed to:", year);
+    setSelectedYear(year);
+    setCurrentPage(1);
+    setLastVisible(null);
+  };
+
   // Add useEffect to log when genresList changes
   useEffect(() => {
     console.log("Current genresList:", genresList);
@@ -643,44 +815,16 @@ export default function SeriesDisponiblePage() {
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <h1 className="text-3xl font-bold tracking-tight">
-            Available Series
+            {t('available_series', 'Available Series')}
           </h1>
-          <div className="flex flex-col gap-4 md:flex-row md:items-center">
-            {/* <div className="relative w-full md:w-[300px]">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search series..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === "Enter") {
-                    handleSearch();
-                  }
-                }}
-                className="pl-9"
-              />
-            </div> */}
-            {/* <Button 
-              onClick={fetchAllSeries} 
-              disabled={isLoading}
-              className="w-full md:w-auto"
-            >
-              {isLoading ? "Processing..." : "Update Series Database"}
-            </Button> */}
-          </div>
+          {/* Update Series Database button removed as requested */}
         </div>
 
         {/* Series Filters */}
         <SeriesFilters
           genres={genresList}
           onGenreChange={handleGenreChange}
-          onYearChange={(year) => {
-            console.log("Year filter changed to:", year);
-            setSelectedYear(year);
-            setCurrentPage(1);
-            setLastVisible(null);
-          }}
+          onYearChange={handleYearChange}
           onSortChange={(sort) => {
             setSelectedSort(sort);
             setCurrentPage(1);
@@ -688,17 +832,12 @@ export default function SeriesDisponiblePage() {
           }}
           yearOptions={getYearOptions()}
           selectedYear={selectedYear}
+          selectedGenre={selectedGenre}
+          selectedSort={selectedSort}
+          labelGenre={t('genre', 'Genre')}
+          labelYear={t('year', 'Year')}
+          labelSort={t('sort', 'Sort')}
         />
-
-        {/* Show current filter status */}
-        {selectedGenre !== "all" && (
-          <div className="text-sm text-muted-foreground">
-            Showing series in genre: <span className="font-medium">{selectedGenre}</span>
-            {series.length > 0 && (
-              <span className="ml-2">({series.length} series found)</span>
-            )}
-          </div>
-        )}
 
         {isLoading && (
           <div className="space-y-2">
@@ -736,7 +875,7 @@ export default function SeriesDisponiblePage() {
                       key={item.id}
                       id={item.id}
                       title={item.name}
-                      poster={item.poster_path || "/placeholder.svg"}
+                      poster={item.poster_path ? `https://image.tmdb.org/t/p/w300${item.poster_path}` : "/placeholder.svg"}
                       genre={item.genres.map(g => g.name).join(", ")}
                       releaseDate={item.first_air_date}
                       rating={item.vote_average}

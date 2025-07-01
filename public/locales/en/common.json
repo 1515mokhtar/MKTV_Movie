@@ -45,7 +45,9 @@
     "feature3Title": "Secure",
     "feature3Description": "Your data is protected with our advanced security measures",
     "popularMoviesTitle": "Popular Movies",
-    "popularSeriesTitle": "Popular TV Series"
+    "popularSeriesTitle": "Popular TV Series",
+    "trendingNow": "Trending Now",
+    "trendingNowMoviesSeries": "Trending Now: Movies & Series"
   },
   "moviesAvailable": {
     "title": "Movies available",
@@ -88,5 +90,23 @@
       "yourChoicesTitle": "4. Your Choices and Rights",
       "yourChoicesContent": "You have certain choices regarding the information we collect and how it is used. This includes the ability to access, update, or delete your personal information, as well as to opt-out of certain data collection or marketing communications. You may also have additional rights depending on your jurisdiction, such as the right to data portability."
     }
+  },
+  "homeLanding": {
+    "welcomeTitle": "Welcome to MKTV!",
+    "welcomeSubtitle": "Discover the best movies and series, enjoy HD streaming, and experience entertainment like never before.",
+    "plansTitle": "Our Plans",
+    "premiumPlanTitle": "MKTV Premium:",
+    "premiumPlanDescription": "Unlimited access to all movies and series, exclusive releases, and no ads.",
+    "premiumPlanPrice": "Only $9.99/month",
+    "aboutTitle": "About Our Company",
+    "aboutDescription": "MKTV is a leading streaming platform, offering a vast library of movies and TV shows for all ages. Our mission is to bring the best entertainment to your screen, anytime, anywhere.",
+    "subscribeButton": "Subscribe to a Plan",
+    "watchFreeButton": "Start Watching for Free"
+  },
+  "filters": {
+    "allGenres": "All Genres",
+    "selectGenrePlaceholder": "Select Genre",
+    "allYears": "All Years",
+    "sortByPlaceholder": "Sort By"
   }
 } 

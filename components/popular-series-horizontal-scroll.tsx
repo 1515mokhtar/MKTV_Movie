@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { MovieCard } from "./movie-card";
 
-export function PopularSeriesGrid() {
+export function PopularSeriesHorizontalScroll() {
   const [series, setSeries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [genres, setGenres] = useState<Record<number, string>>({});
 
-  // Fetch genres
   useEffect(() => {
     async function fetchGenres() {
       const res = await fetch(
@@ -39,7 +38,9 @@ export function PopularSeriesGrid() {
         }
       );
       const data = await res.json();
-      setSeries(data.results || []);
+      // Sort by vote_average (rating), descending, and take top 20
+      const sorted = (data.results || []).sort((a: any, b: any) => b.vote_average - a.vote_average).slice(0, 20);
+      setSeries(sorted);
       setLoading(false);
     }
     fetchPopularSeries();
@@ -48,27 +49,35 @@ export function PopularSeriesGrid() {
   if (loading) return <div>Loading...</div>;
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-      {series.map((item: any) => (
-        <MovieCard
-          key={item.id}
-          title={item.name}
-          genre={
-            item.genre_ids
-              ?.map((id: number) => genres[id])
-              .filter(Boolean)
-              .join(", ") || ""
-          }
-          releaseDate={item.first_air_date}
-          poster={
-            item.poster_path
-              ? `https://image.tmdb.org/t/p/w300${item.poster_path}`
-              : "/placeholder.svg"
-          }
-          id={item.id.toString()}
-          href={`/series/${item.id}`}
-        />
-      ))}
-    </div>
+    <section className="mt-12">
+      <h2 className="text-3xl font-bold mb-6">Popular TV Series</h2>
+      <div className="flex overflow-x-auto gap-4 pb-2 scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-gray-300">
+        {series.map((item: any) => (
+          <div
+            key={item.id}
+            className="min-w-[180px] max-w-[200px] flex-shrink-0"
+          >
+            <MovieCard
+              title={item.name}
+              genre={
+                item.genre_ids
+                  ?.map((id: number) => genres[id])
+                  .filter(Boolean)
+                  .join(", ") || ""
+              }
+              releaseDate={item.first_air_date}
+              poster={
+                item.poster_path
+                  ? `https://image.tmdb.org/t/p/w300${item.poster_path}`
+                  : "/placeholder.svg"
+              }
+              id={item.id.toString()}
+              rating={item.vote_average}
+              category="TV Series"
+            />
+          </div>
+        ))}
+      </div>
+    </section>
   );
 } 

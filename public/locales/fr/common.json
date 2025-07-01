@@ -45,7 +45,9 @@
     "feature3Title": "Sécurisé",
     "feature3Description": "Vos données sont protégées grâce à nos mesures de sécurité avancées",
     "popularMoviesTitle": "Films Populaires",
-    "popularSeriesTitle": "Séries TV Populaires"
+    "popularSeriesTitle": "Séries TV Populaires",
+    "trendingNow": "Tendances Actuelles",
+    "trendingNowMoviesSeries": "Tendances : Films & Séries"
   },
   "moviesAvailable": {
     "title": "Films disponibles",
@@ -74,7 +76,7 @@
       "intellectualPropertyTitle": "3. Propriété intellectuelle",
       "intellectualPropertyContent": "Tout le contenu et les matériaux disponibles sur le Service, y compris, mais sans s'y limiter, le texte, les graphiques, le nom du site web, le code, les images et les logos sont la propriété intellectuelle de MKTV ou de ses concédants de licence et sont protégés par les lois applicables sur le droit d'auteur et les marques de commerce. Toute utilisation inappropriée, y compris, mais sans s'y limiter, la reproduction, la distribution, l'affichage ou la transmission de tout contenu sur ce site est strictement interdite, sauf autorisation spécifique de MKTV.",
       "terminationTitle": "4. Résiliation",
-      "terminationContent": "Nous pouvons résilier ou suspendre votre accès au Service immédiatement, sans préavis ni responsabilité, pour quelque raison que ce soit, y compris, sans limitation, si vous violez les Conditions. Dès la résiliation, votre droit d'utiliser le Service cessera immédiatement. Si vous souhaitez résilier votre compte, vous pouvez simplement cesser d'utiliser le Service."
+      "terminationContent": "Nous pouvons résilier ou suspendre votre accès au Service immédiatement, sans préavis ni responsabilité, pour quelque raison que ce soit, y compris, sans limitation, si vous ne respectez pas les Conditions. En cas de résiliation, votre droit d'utiliser le Service cessera immédiatement. Si vous souhaitez résilier votre compte, vous pouvez simplement cesser d'utiliser le Service."
     },
     "privacyPolicy": {
       "title": "Politique de confidentialité",
@@ -88,5 +90,17 @@
       "yourChoicesTitle": "4. Vos choix et vos droits",
       "yourChoicesContent": "Vous avez certains choix concernant les informations que nous recueillons et la manière dont elles sont utilisées. Cela inclut la possibilité d'accéder, de mettre à jour ou de supprimer vos informations personnelles, ainsi que de refuser certaines collectes de données ou communications marketing. Vous pouvez également avoir des droits supplémentaires en fonction de votre juridiction, tels que le droit à la portabilité des données."
     }
+  },
+  "homeLanding": {
+    "welcomeTitle": "Bienvenue sur MKTV !",
+    "welcomeSubtitle": "Découvrez les meilleurs films et séries, profitez du streaming HD et vivez le divertissement comme jamais auparavant.",
+    "plansTitle": "Nos Formules",
+    "premiumPlanTitle": "MKTV Premium :",
+    "premiumPlanDescription": "Accès illimité à tous les films et séries, sorties exclusives et sans publicité.",
+    "premiumPlanPrice": "Seulement 9,99 $/mois",
+    "aboutTitle": "À Propos de Notre Entreprise",
+    "aboutDescription": "MKTV est une plateforme de streaming de premier plan, offrant une vaste bibliothèque de films et d'émissions de télévision pour tous les âges. Notre mission est d'apporter le meilleur du divertissement sur votre écran, à tout moment et en tout lieu.",
+    "subscribeButton": "S'abonner à une Formule",
+    "watchFreeButton": "Commencer à Regarder Gratuitement"
   }
 } 

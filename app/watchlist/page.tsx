@@ -42,13 +42,13 @@ interface WatchlistItem {
 
 // Fonction utilitaire pour formater la date
 const formatDate = (dateString: string) => {
-  try {
+      try {
     const date = new Date(dateString)
     if (!isValid(date)) {
       return "Date inconnue"
     }
     return formatDistanceToNow(date, { addSuffix: true, locale: fr })
-  } catch (error) {
+      } catch (error) {
     console.error("Error formatting date:", error)
     return "Date inconnue"
   }
@@ -83,8 +83,8 @@ const validateAndConvertDate = (dateString: any): string => {
   } catch (error) {
     console.error("Error converting date:", error)
     return new Date().toISOString()
-  }
-}
+      }
+    }
 
 // Fonction utilitaire pour obtenir l'URL de l'image TMDB
 const getTMDBImageUrl = (posterPath: string): string => {
@@ -205,17 +205,17 @@ export default function WatchlistPage() {
           <h1 className="text-2xl font-bold mb-4">Connectez-vous</h1>
           <p className="text-gray-400 mb-6">
             Vous devez être connecté pour voir votre watchlist
-          </p>
+        </p>
           <Button asChild>
             <Link href="/login">Se connecter</Link>
-          </Button>
-        </div>
+        </Button>
       </div>
-    )
+    </div>
+  )
   }
 
   if (loading) {
-    return (
+  return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-center items-center min-h-[400px]">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -245,9 +245,9 @@ export default function WatchlistPage() {
           <p className="text-gray-400 mb-6">
             Ajoutez des films à votre watchlist pour les retrouver ici
           </p>
-          <Button asChild>
+            <Button asChild>
             <Link href="/movies">Découvrir des films</Link>
-          </Button>
+            </Button>
         </div>
       </div>
     )

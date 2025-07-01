@@ -11,210 +11,138 @@ import { useEffect, useState } from "react"
 import { PopularMoviesGrid } from "@/components/popular-movies-grid"
 import { PopularSeriesGrid } from "@/components/popular-series-grid"
 import { useTranslation } from 'react-i18next';
+import { type CarouselApi } from "@/components/carousel";
 
-interface Movie {
-  id: number
-  title: string
-  backdrop_path: string
-  overview: string
+interface TrendingItem {
+  id: number;
+  title?: string;
+  name?: string;
+  backdrop_path: string;
+  overview: string;
+  poster_path: string;
+  media_type: string;
 }
 
 export default function Home() {
   const router = useRouter()
-  const [trendingMovies, setTrendingMovies] = useState<Movie[]>([])
+  const [trendingItems, setTrendingItems] = useState<TrendingItem[]>([])
   const [loading, setLoading] = useState(true)
   const { t } = useTranslation('common');
+  const [api, setApi] = useState<CarouselApi>()
 
   useEffect(() => {
-    const fetchTrendingMovies = async () => {
+    if (!api) {
+      return
+    }
+
+    let autoplayInterval: NodeJS.Timeout;
+
+    const startAutoplay = () => {
+      autoplayInterval = setInterval(() => {
+        api.scrollNext();
+      }, 10000);
+    };
+
+    const stopAutoplay = () => {
+      clearInterval(autoplayInterval);
+    };
+
+    // Start autoplay when component mounts or API is set
+    startAutoplay();
+
+    // Stop autoplay when component unmounts
+    return () => stopAutoplay();
+  }, [api]);
+
+  useEffect(() => {
+    const fetchTrending = async () => {
       try {
         setLoading(true)
+        const options = {
+          method: "GET",
+          headers: {
+            accept: "application/json",
+            Authorization:
+              "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0NzgxYWE1NWExYmYzYzZlZjA1ZWUwYmMwYTk0ZmNiYyIsIm5iZiI6MTczODcwNDY2Mi4wMDMsInN1YiI6IjY3YTI4NzE1N2M4NjA5NjAyOThhNjBmNiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.kGBXkjuBtqgKXEGMVRWJ88LUWg_lykPOyBZKoOIBmcc",
+          },
+        };
         const response = await fetch(
-          `https://api.themoviedb.org/3/trending/movie/day?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`
+          `https://api.themoviedb.org/3/trending/all/day`,
+          options
         )
         const data = await response.json()
-        setTrendingMovies(data.results.slice(0, 10))
+        setTrendingItems(data.results.slice(0, 20)) // Fetch top 20 for main carousel
+        console.log("Trending Data:", data.results.slice(0, 20));
       } catch (error) {
-        console.error("Error fetching trending movies:", error)
+        console.error("Error fetching trending:", error)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchTrendingMovies()
+    fetchTrending()
   }, [])
 
   return (
     <div className="min-h-screen">
       <main className="flex-1">
-        {/* Hero Section */}
-        <section
-          className="relative w-full flex items-center justify-center text-center bg-gradient-to-b from-primary/10 to-background/90"
-          style={{ minHeight: trendingMovies.length === 0 ? '60vh' : '80vh' }}
-        >
-          {loading ? (
-            <div className="w-full h-full flex items-center justify-center">
-              <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary"></div>
-            </div>
-          ) : trendingMovies.length === 0 ? (
-            <div className="flex flex-col items-center justify-center w-full px-4 py-12 sm:py-20">
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 drop-shadow-lg">{t('home.welcomeTitle')}</h2>
-              <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-2 max-w-2xl mx-auto">{t('home.welcomeSubtitle')}</p>
-              <p className="text-sm sm:text-base text-muted-foreground">{t('home.noTrendingMovies')}</p>
-            </div>
-          ) : (
-            <Carousel
-              opts={{
-                align: "start",
-                loop: true,
-              }}
-              className="w-full h-full"
-            >
-              <CarouselContent className="h-full">
-                {trendingMovies.map((movie) => (
-                  <CarouselItem key={movie.id} className="h-full">
-                    <div className="relative h-full w-full">
-                      <img
-                        src={`https://image.tmdb.org/t/p/original${movie.backdrop_path}`}
-                        alt={movie.title}
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
-                      <div className="absolute inset-0 flex items-center">
-                        <div className="container mx-auto px-4">
-                          <div className="max-w-2xl">
-                            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-4">
-                              {movie.title}
-                            </h1>
-                            <p className="text-lg sm:text-xl text-gray-200 mb-6 line-clamp-3">
-                              {movie.overview}
-                            </p>
-                            <div className="flex gap-4">
-                              <Button
-                                size="lg"
-                                className="bg-primary hover:bg-primary/90"
-                                onClick={() => router.push(`/watch/${movie.id}`)}
-                              >
-                                {t('home.watchNowButton')}
-                              </Button>
-                              <Button
-                                size="lg"
-                                variant="outline"
-                                className="bg-white/10 hover:bg-white/20 text-white border-white/20"
-                                onClick={() => router.push(`/movies/${movie.id}`)}
-                              >
-                                {t('home.viewDetailsButton')}
-                              </Button>
-                            </div>
-                          </div>
+        {/* Main Content */}
+        <main className="container py-8">
+          <div className="flex flex-col gap-12">
+
+            {/* Trending Now Section */}
+            <section>
+              <h2 className="text-3xl font-bold mb-6">{t('home.trendingNowMoviesSeries') ?? 'Trending Now: Movies & Series'}</h2>
+              <Carousel
+                opts={{
+                  align: "start",
+                  loop: true,
+                }}
+                setApi={setApi}
+                className="w-full"
+              >
+                <CarouselContent>
+                  {trendingItems.map((item) => (
+                    <CarouselItem key={item.id} className="basis-2/3 sm:basis-1/3 md:basis-1/4 lg:basis-1/5 xl:basis-1/6 group relative cursor-pointer" onClick={() => {
+                      if (item.media_type === 'movie') {
+                        router.push(`/movies/${item.id}`);
+                      } else if (item.media_type === 'tv') {
+                        router.push(`/series/${item.id}`);
+                      }
+                    }}>
+                      <div className="relative aspect-[2/3] w-full">
+                        <img
+                          src={`https://image.tmdb.org/t/p/w300${item.poster_path}`}
+                          alt={item.title || item.name}
+                          className="rounded-md object-cover w-full h-full"
+                        />
+                        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
+                          <h3 className="text-white text-center font-semibold text-lg px-2">{item.title || item.name}</h3>
                         </div>
                       </div>
-                    </div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
                 <CarouselDots />
-              </div>
-            </Carousel>
-          )}
-        </section>
+              </Carousel>
+            </section>
 
-        {/* Main Content */}
-        <div className="container space-y-16 py-16">
-          {/* Services Section */}
-          <section className="relative py-20 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5" />
-            <div className="container relative z-10">
-              <div className="text-center mb-12">
-                <h2 className="text-4xl font-bold mb-4">{t('home.whyChooseTitle')}</h2>
-                <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                  {t('home.whyChooseSubtitle')}
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="bg-background/50 backdrop-blur-sm p-6 rounded-lg border border-border">
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                    <svg
-                      className="w-6 h-6 text-primary"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                      />
-                    </svg>
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">{t('home.feature1Title')}</h3>
-                  <p className="text-muted-foreground">
-                    {t('home.feature1Description')}
-                  </p>
-                </div>
-                <div className="bg-background/50 backdrop-blur-sm p-6 rounded-lg border border-border">
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                    <svg
-                      className="w-6 h-6 text-primary"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-                      />
-                    </svg>
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">{t('home.feature2Title')}</h3>
-                  <p className="text-muted-foreground">
-                    {t('home.feature2Description')}
-                  </p>
-                </div>
-                <div className="bg-background/50 backdrop-blur-sm p-6 rounded-lg border border-border">
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                    <svg
-                      className="w-6 h-6 text-primary"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                      />
-                    </svg>
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">{t('home.feature3Title')}</h3>
-                  <p className="text-muted-foreground">
-                    {t('home.feature3Description')}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
+            {/* Category Tabs */}
+            {/* <CategoryTabs /> */}
 
-          {/* Category Tabs */}
-          <CategoryTabs />
+            {/* Popular Movies Grid */}
+            <section className="mt-12">
+              <h2 className="text-3xl font-bold mb-6">{t('home.popularMoviesTitle')}</h2>
+              <PopularMoviesGrid />
+            </section>
 
-          {/* Popular Movies Grid */}
-          <section className="mt-12">
-            <h2 className="text-3xl font-bold mb-6">{t('home.popularMoviesTitle')}</h2>
-            <PopularMoviesGrid />
-          </section>
-
-          {/* Popular Series Grid */}
-          <section className="mt-12">
-            <h2 className="text-3xl font-bold mb-6">{t('home.popularSeriesTitle')}</h2>
-            <PopularSeriesGrid />
-          </section>
-        </div>
+            {/* Popular Series Grid */}
+            <section className="mt-12">
+              <h2 className="text-3xl font-bold mb-6">{t('home.popularSeriesTitle')}</h2>
+              <PopularSeriesGrid />
+            </section>
+          </div>
+        </main>
       </main>
     </div>
   )

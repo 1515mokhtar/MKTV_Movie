@@ -192,7 +192,7 @@ function SimilarMoviesSection({ similarMovies, loading, error }: { similarMovies
   return (
     <Carousel>
       <CarouselContent className="-ml-4">
-        {similarMovies.map((movie) => (
+      {similarMovies.map((movie) => (
           <CarouselItem key={movie.id} className="pl-4 basis-1/3 md:basis-1/4 lg:basis-1/4 xl:basis-1/5">
             <Link href={`/movies/${movie.id}`}>
               <EnhancedMovieCard
@@ -208,7 +208,7 @@ function SimilarMoviesSection({ similarMovies, loading, error }: { similarMovies
               />
             </Link>
           </CarouselItem>
-        ))}
+      ))}
       </CarouselContent>
     </Carousel>
   )
@@ -365,7 +365,7 @@ export default function WatchPage() {
       const watchlistRef = doc(db, "watchlist", `${user.uid}_${movie.id}`)
       const watchlistDoc = await getDoc(watchlistRef)
       const exists = watchlistDoc.exists()
-
+      
       if (exists) {
         setShowRemoveConfirm(true)
       } else {
@@ -412,7 +412,7 @@ export default function WatchPage() {
             else if (Array.isArray(value)) acc[key] = [];
             else if (typeof value === 'number') acc[key] = 0;
             else acc[key] = null;
-          } else {
+      } else {
             acc[key] = value;
           }
           return acc;
@@ -459,11 +459,11 @@ export default function WatchPage() {
       })
     } catch (error) {
       console.error("Error removing from watchlist:", error)
-      toast({
+    toast({
         title: "Erreur",
         description: "Une erreur est survenue lors de la suppression du film",
         variant: "destructive"
-      })
+    })
     } finally {
       setIsWatchlistLoading(false)
     }
@@ -684,9 +684,9 @@ export default function WatchPage() {
             Ce film n'est pas disponible actuellement. Veuillez réessayer plus tard ou choisir un autre film.
           </p>
           <div className="flex flex-col gap-4">
-            <Button asChild>
-              <Link href="/movies">Retour à l'accueil</Link>
-            </Button>
+          <Button asChild>
+            <Link href="/movies">Retour à l'accueil</Link>
+          </Button>
             <Button variant="outline" asChild>
               <Link href="/movies/disponible">Voir les films disponibles</Link>
             </Button>
@@ -699,16 +699,16 @@ export default function WatchPage() {
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header with back button and title */}
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center gap-4 mb-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center gap-4 mb-4">
+                <Button
+                  variant="ghost"
+                  size="icon"
             onClick={() => router.back()}
             className="hover:bg-gray-800"
-          >
+                >
             <ChevronLeft className="h-6 w-6" />
-          </Button>
+                </Button>
           <h1 className="text-2xl font-bold truncate">{movie?.title}</h1>
         </div>
       </div>
@@ -736,8 +736,8 @@ export default function WatchPage() {
               onError={handleIframeError}
             />
           </div>
-        </div>
-      </div>
+                  </div>
+                </div>
 
       {/* Content */}
       <div className="container mx-auto px-4 py-8">
@@ -762,7 +762,7 @@ export default function WatchPage() {
                 ) : isInWatchlist ? (
                   <Check className="h-4 w-4 text-primary" />
                 ) : (
-                  <Bookmark className="h-4 w-4" />
+                    <Bookmark className="h-4 w-4" />
                 )}
                 <span>
                   {isWatchlistLoading 
@@ -773,143 +773,143 @@ export default function WatchPage() {
                         ? "Ajouter à la watchlist" 
                         : "Connectez-vous pour ajouter"}
                 </span>
-              </Button>
+                  </Button>
 
-              <Button variant="outline" size="sm" className="gap-2" onClick={shareMovie}>
-                <Share2 className="h-4 w-4" />
-                <span>Partager</span>
-              </Button>
-            </div>
-
-            {/* Genres */}
-            {movie?.genres && movie.genres.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-6">
-                {movie.genres.map((genre, index) => (
-                  <Badge key={index} variant="secondary" className="bg-gray-800 hover:bg-gray-700">
-                    {genre}
-                  </Badge>
-                ))}
+                  <Button variant="outline" size="sm" className="gap-2" onClick={shareMovie}>
+                    <Share2 className="h-4 w-4" />
+                    <span>Partager</span>
+                  </Button>
               </div>
-            )}
 
-            {/* Description */}
+              {/* Genres */}
+            {movie?.genres && movie.genres.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {movie.genres.map((genre, index) => (
+                    <Badge key={index} variant="secondary" className="bg-gray-800 hover:bg-gray-700">
+                      {genre}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              {/* Description */}
             {movie?.description && (
               <p className="text-gray-300 mb-8 leading-relaxed">{movie.description}</p>
             )}
 
             {/* Comments section */}
-            <Tabs defaultValue="comments" className="w-full">
-              <TabsList className="grid w-full grid-cols-1 mb-6">
-                <TabsTrigger value="comments">Commentaires</TabsTrigger>
-              </TabsList>
+              <Tabs defaultValue="comments" className="w-full">
+                <TabsList className="grid w-full grid-cols-1 mb-6">
+                  <TabsTrigger value="comments">Commentaires</TabsTrigger>
+                </TabsList>
 
-              <TabsContent value="comments" className="space-y-6">
-                {/* Comment form */}
-                {user ? (
-                <div className="flex gap-3">
-                  <Avatar>
-                      <AvatarImage src={user.photoURL || "/placeholder.svg?height=40&width=40"} />
-                      <AvatarFallback>{user.displayName?.[0] || "U"}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <textarea
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-                      placeholder="Ajouter un commentaire..."
-                      rows={2}
-                    ></textarea>
-                    <div className="flex justify-end mt-2">
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          const textarea = document.querySelector("textarea")
-                          if (textarea && textarea.value.trim()) {
-                              handleAddComment(textarea.value)
-                            textarea.value = ""
-                          }
-                        }}
-                      >
-                        Commenter
+                <TabsContent value="comments" className="space-y-6">
+                  {/* Comment form */}
+                  {user ? (
+                  <div className="flex gap-3">
+                    <Avatar>
+                        <AvatarImage src={user.photoURL || "/placeholder.svg?height=40&width=40"} />
+                        <AvatarFallback>{user.displayName?.[0] || "U"}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <textarea
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                        placeholder="Ajouter un commentaire..."
+                        rows={2}
+                      ></textarea>
+                      <div className="flex justify-end mt-2">
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            const textarea = document.querySelector("textarea")
+                            if (textarea && textarea.value.trim()) {
+                                handleAddComment(textarea.value)
+                              textarea.value = ""
+                            }
+                          }}
+                        >
+                          Commenter
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  ) : (
+                    <div className="bg-gray-800 rounded-lg p-4 text-center">
+                      <p className="text-gray-400 mb-2">Connectez-vous pour commenter</p>
+                      <Button asChild>
+                        <Link href="/login">Se connecter</Link>
                       </Button>
                     </div>
-                  </div>
-                </div>
-                ) : (
-                  <div className="bg-gray-800 rounded-lg p-4 text-center">
-                    <p className="text-gray-400 mb-2">Connectez-vous pour commenter</p>
-                    <Button asChild>
-                      <Link href="/login">Se connecter</Link>
-                    </Button>
-                  </div>
-                )}
+                  )}
 
-                {/* Comments list */}
-                <div className="space-y-6">
-                  {commentsLoading ? (
-                    <div className="flex justify-center">
-                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                    </div>
-                  ) : comments.length === 0 ? (
-                    <div className="text-center py-8">
-                      <p className="text-gray-400">Aucun commentaire pour le moment. Soyez le premier à commenter !</p>
-                    </div>
-                  ) : (
-                    comments.map((comment) => (
-                      <div key={comment.id} className="flex gap-3 bg-gray-800/50 p-4 rounded-lg">
-                      <Avatar>
-                          <AvatarImage src={comment.userPhoto || "/placeholder.svg"} />
-                          <AvatarFallback>{comment.username[0]}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium">{comment.username}</span>
-                            <span className="text-xs text-gray-400">
-                              {formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true, locale: fr })}
-                            </span>
-                        </div>
-                          <p className="text-gray-300 text-sm mb-2">{comment.content}</p>
-                        <div className="flex items-center gap-4 text-xs text-gray-400">
-                            <button 
-                              className="flex items-center gap-1 hover:text-gray-300"
-                              onClick={() => likeComment(comment.id)}
-                              title="J'aime"
-                            >
-                            <ThumbsUp className="h-3.5 w-3.5" />
-                            <span>{comment.likes}</span>
-                          </button>
-                            <button 
-                              className="flex items-center gap-1 hover:text-gray-300"
-                              onClick={() => dislikeComment(comment.id)}
-                              title="Je n'aime pas"
-                            >
-                            <ThumbsDown className="h-3.5 w-3.5" />
-                              <span>{comment.dislikes}</span>
-                          </button>
+                  {/* Comments list */}
+                  <div className="space-y-6">
+                    {commentsLoading ? (
+                      <div className="flex justify-center">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      </div>
+                    ) : comments.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-gray-400">Aucun commentaire pour le moment. Soyez le premier à commenter !</p>
+                      </div>
+                    ) : (
+                      comments.map((comment) => (
+                        <div key={comment.id} className="flex gap-3 bg-gray-800/50 p-4 rounded-lg">
+                        <Avatar>
+                            <AvatarImage src={comment.userPhoto || "/placeholder.svg"} />
+                            <AvatarFallback>{comment.username[0]}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium">{comment.username}</span>
+                              <span className="text-xs text-gray-400">
+                                {formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true, locale: fr })}
+                              </span>
+                          </div>
+                            <p className="text-gray-300 text-sm mb-2">{comment.content}</p>
+                          <div className="flex items-center gap-4 text-xs text-gray-400">
+                              <button 
+                                className="flex items-center gap-1 hover:text-gray-300"
+                                onClick={() => likeComment(comment.id)}
+                                title="J'aime"
+                              >
+                              <ThumbsUp className="h-3.5 w-3.5" />
+                              <span>{comment.likes}</span>
+                            </button>
+                              <button 
+                                className="flex items-center gap-1 hover:text-gray-300"
+                                onClick={() => dislikeComment(comment.id)}
+                                title="Je n'aime pas"
+                              >
+                              <ThumbsDown className="h-3.5 w-3.5" />
+                                <span>{comment.dislikes}</span>
+                            </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
+                      ))
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
 
           {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <h2 className="text-xl font-semibold mb-4">Films similaires</h2>
-            <SimilarMoviesSection 
+            <div className="lg:col-span-1">
+              <h2 className="text-xl font-semibold mb-4">Films similaires</h2>
+              <SimilarMoviesSection 
               similarMovies={movie?.similarMovies || []}
               loading={loading}
               error={error}
-            />
+              />
 
-            <div className="mt-8">
-              <h2 className="text-xl font-semibold mb-4">Historique de visionnage</h2>
-              <div className="bg-gray-800/50 rounded-lg p-4">
-                <div className="flex items-center gap-3 mb-4">
-                  <Clock className="h-5 w-5 text-gray-400" />
-                  <h3 className="font-medium">Continuer à regarder</h3>
-                </div>
+              <div className="mt-8">
+                <h2 className="text-xl font-semibold mb-4">Historique de visionnage</h2>
+                <div className="bg-gray-800/50 rounded-lg p-4">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Clock className="h-5 w-5 text-gray-400" />
+                    <h3 className="font-medium">Continuer à regarder</h3>
+                  </div>
                 <WatchHistoryList />
               </div>
             </div>
